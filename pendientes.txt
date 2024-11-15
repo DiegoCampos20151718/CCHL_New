@@ -1,0 +1,9 @@
+implementacion de servidor de correo electronico
+cambio de contraseña
+notificacion de cchl 
+
+***condicion de usuario A U
+Generar comprobacion de codigo para qr
+
+rol instructor 
+validar cchl entregado/descarga
