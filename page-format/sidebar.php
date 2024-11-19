@@ -68,7 +68,12 @@
             </a>
           </li> 
           End Contact Page Nav -->
-
+          <li class="nav-item">
+            <a class="nav-link collapsed" href="Carga_Cer.php" data-value="configuracion">
+              <i class="bi bi-layout-text-sidebar-reverse"></i>
+              <span>Carga de certificados</span>
+            </a>
+          </li>
           <li class="nav-item">
             <a class="nav-link collapsed" href="configuracion.php" data-value="configuracion">
               <i class="bi bi-gear"></i>
