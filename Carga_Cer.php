@@ -44,6 +44,10 @@ function renderFolderList($items) {
         if ($item['type'] === 'folder') {
             $html .= '<li class="list-group-item">';
             $html .= '<strong>' . htmlspecialchars($item['name']) . '</strong>';
+            $html .= '<form method="POST" class="d-inline" action="delete.php">
+                        <input type="hidden" name="path" value="assets/Certificados/' . htmlspecialchars($item['name']) . '">
+                        <button type="submit" class="btn btn-danger btn-sm ms-2">Eliminar</button>
+                      </form>';
             $html .= '<ul class="list-group ms-4">';
             $html .= renderFolderList($item['contents']);
             $html .= '</ul>';
@@ -51,11 +55,12 @@ function renderFolderList($items) {
         } elseif ($item['type'] === 'file') {
             $html .= '<li class="list-group-item">';
             $html .= '<a href="assets/Certificados/' . htmlspecialchars($item['name']) . '" target="_blank">' . htmlspecialchars($item['name']) . '</a>';
-            $html .= '</li>';
+            $html .= '</li>'; // Sin botón de eliminar para archivos
         }
     }
     return $html;
 }
+
 
 // Manejo de la subida de archivos
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['folderName']) && isset($_FILES['pdfFiles'])) {
@@ -156,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['folderName']) && isse
         <ul id="fileList" class="list-group mt-4"></ul>
 
         <!-- Sección de visualización de carpetas y PDFs -->
-        <h2 class="text-center mb-4">Carpetas y certificados</h2>
+        <h2 class="text-center mb-4">Cursos y certificados</h2>
         <ul id="folderList" class="list-group">
             <?= renderFolderList($foldersAndFiles); ?>
         </ul>
