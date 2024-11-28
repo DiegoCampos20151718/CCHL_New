@@ -55,12 +55,11 @@ function renderFolderList($items) {
         } elseif ($item['type'] === 'file') {
             $html .= '<li class="list-group-item">';
             $html .= '<a href="assets/Certificados/' . htmlspecialchars($item['name']) . '" target="_blank">' . htmlspecialchars($item['name']) . '</a>';
-            $html .= '</li>'; // Sin botón de eliminar para archivos
+            $html .= '</li>';
         }
     }
     return $html;
 }
-
 
 // Manejo de la subida de archivos
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['folderName']) && isset($_FILES['pdfFiles'])) {
@@ -117,34 +116,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['folderName']) && isse
             font-weight: 600;
             color: #333;
         }
-        .main {
-            padding: 20px;
-            background: #ffffff;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-        }
-        ul.list-group ul {
-            margin-top: 10px;
-        }
-        ul.list-group > li {
-            cursor: pointer;
-        }
-        ul.list-group ul {
-            display: none;
-        }
-        ul.list-group ul.show {
-            display: block;
-        }
     </style>
 </head>
 <body>
-    <!-- ======= Header ======= -->
-    <?php include_once 'page-format/header.php'; ?>
+     <!-- ======= Header ======= -->
+     <?php include_once 'page-format/header.php'; ?>
     <!-- End Header -->
 
     <!-- ======= Sidebar ======= -->
     <?php include_once 'page-format/sidebar.php'; ?>
     <!-- End Sidebar -->
+     <!-- Modal para "Cursos y certificados" -->
+    <div class="modal fade" id="certificadosModal" tabindex="-1" aria-labelledby="certificadosModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="certificadosModalLabel">Cursos y certificados</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul id="folderList" class="list-group">
+                        <?= renderFolderList($foldersAndFiles); ?>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Modal para la barra de progreso -->
+    <div class="modal fade" id="progressModal" tabindex="-1" aria-labelledby="progressModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="progressModalLabel">Subiendo Archivos...</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="progress">
+                        <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <main id="main" class="main container mt-9">
         <h1 class="text-center mb-4">Carga de certificados</h1>
@@ -154,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['folderName']) && isse
                 <input type="text" id="folderName" class="form-control" placeholder="Ingresa el nombre" required>
             </div>
             <button id="selectFolder" class="btn btn-primary w-100 mb-3">
-                <i class="bi bi-folder"></i> Selecciona la carpeta con los pdf´s
+                <i class="bi bi-folder"></i> Selecciona la carpeta con los PDF's
             </button>
             <button id="uploadFiles" class="btn btn-success w-100 hidden">Guardar los PDFs</button>
         </div>
@@ -167,107 +179,116 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['folderName']) && isse
         </ul>
     </main>
 
-    <!-- Vendor JS Files -->
     <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const folderItems = document.querySelectorAll('#folderList > li');
+        const showCertificadosButton = document.getElementById('showCertificados');
+        const certificadosModal = new bootstrap.Modal(document.getElementById('certificadosModal'));
 
-            folderItems.forEach(folder => {
-                folder.addEventListener('click', (event) => {
-                    event.stopPropagation(); // Evitar propagación de eventos
-                    const sublist = folder.querySelector('ul');
-                    if (sublist) {
-                        sublist.classList.toggle('show');
-                    }
-                });
-            });
+        // Mostrar el modal al hacer clic en el botón
+        showCertificadosButton.addEventListener('click', () => {
+            certificadosModal.show();
         });
+    </script>
+    <script>
         const selectFolderButton = document.getElementById('selectFolder');
-    const uploadFilesButton = document.getElementById('uploadFiles');
-    const fileList = document.getElementById('fileList');
-    const folderNameInput = document.getElementById('folderName');
+        const uploadFilesButton = document.getElementById('uploadFiles');
+        const folderNameInput = document.getElementById('folderName');
+        const fileList = document.getElementById('fileList');
+        const progressModal = new bootstrap.Modal(document.getElementById('progressModal'));
+        const progressBar = document.getElementById('progressBar');
 
-    let selectedFiles = [];
+        let selectedFiles = [];
 
-    // Abrir selector de carpetas y listar PDFs
-    selectFolderButton.addEventListener('click', async () => {
-        try {
-            const folderHandle = await window.showDirectoryPicker();
-            selectedFiles = [];
-            fileList.innerHTML = ''; // Limpiar lista previa
+        selectFolderButton.addEventListener('click', async () => {
+            try {
+                const folderHandle = await window.showDirectoryPicker();
+                selectedFiles = [];
+                fileList.innerHTML = '';
 
-            for await (const [name, handle] of folderHandle) {
-                if (handle.kind === 'file' && name.endsWith('.pdf')) {
-                    const file = await handle.getFile();
-                    selectedFiles.push(file);
+                for await (const [name, handle] of folderHandle.entries()) {
+                    if (handle.kind === 'file' && name.endsWith('.pdf')) {
+                        const file = await handle.getFile();
+                        selectedFiles.push(file);
 
-                    // Crear elementos para el listado editable
-                    const listItem = document.createElement('li');
-                    listItem.className = 'list-group-item d-flex align-items-center';
+                        const listItem = document.createElement('li');
+                        listItem.className = 'list-group-item d-flex align-items-center';
 
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.className = 'form-control me-2';
-                    input.value = name.replace('.pdf', ''); // Nombre sin extensión
-                    input.dataset.originalName = name;
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.className = 'form-control me-2';
+                        input.value = name.replace('.pdf', ''); // Nombre sin extensión
+                        input.dataset.originalName = name;
 
-                    const label = document.createElement('span');
-                    label.textContent = '.pdf';
+                        const label = document.createElement('span');
+                        label.textContent = '.pdf';
 
-                    listItem.appendChild(input);
-                    listItem.appendChild(label);
-                    fileList.appendChild(listItem);
+                        listItem.appendChild(input);
+                        listItem.appendChild(label);
+                        fileList.appendChild(listItem);
+                    }
                 }
+
+                if (selectedFiles.length > 0) {
+                    uploadFilesButton.classList.remove('hidden');
+                } else {
+                    alert('No se encontraron archivos PDF en la carpeta seleccionada.');
+                }
+            } catch (error) {
+                console.error('Error al seleccionar la carpeta:', error);
             }
-
-            if (selectedFiles.length > 0) {
-                uploadFilesButton.classList.remove('hidden');
-            } else {
-                alert('No se encontraron archivos PDF en la carpeta seleccionada.');
-            }
-        } catch (error) {
-            console.error('Error al seleccionar la carpeta:', error);
-        }
-    });
-
-    // Subir archivos al servidor
-uploadFilesButton.addEventListener('click', async () => {
-    const folderName = folderNameInput.value.trim();
-    if (!folderName) {
-        alert('Por favor, ingresa un nombre para la carpeta.');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('folderName', folderName);
-
-    const inputs = fileList.querySelectorAll('input');
-    selectedFiles.forEach((file, index) => {
-        formData.append('pdfFiles[]', file);
-        formData.append('originalNames[]', inputs[index].dataset.originalName); // Nombre original
-        formData.append('newNames[]', inputs[index].value.trim() + '.pdf'); // Nuevo nombre
-    });
-
-    try {
-        const response = await fetch('<?= $_SERVER['PHP_SELF']; ?>', {
-            method: 'POST',
-            body: formData,
         });
 
-        if (response.ok) {
-            alert('¡Archivos subidos correctamente!');
-            location.reload(); // Recargar la página después de guardar los archivos
-        } else {
-            const errorText = await response.text();
-            alert('Error al subir los archivos: ' + errorText);
-        }
-    } catch (error) {
-        console.error('Error durante la subida de archivos:', error);
-        alert('Hubo un problema al subir los archivos.');
-    }
-});
+        uploadFilesButton.addEventListener('click', async () => {
+            const folderName = folderNameInput.value.trim();
+            if (!folderName) {
+                alert('Por favor, ingresa un nombre para la carpeta.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('folderName', folderName);
+
+            const inputs = fileList.querySelectorAll('input');
+            selectedFiles.forEach((file, index) => {
+                formData.append('pdfFiles[]', file);
+                formData.append('originalNames[]', inputs[index].dataset.originalName); // Nombre original
+                formData.append('newNames[]', inputs[index].value.trim() + '.pdf'); // Nuevo nombre
+            });
+
+            progressModal.show();
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '<?= $_SERVER['PHP_SELF']; ?>', true);
+
+                xhr.upload.onprogress = (event) => {
+                    if (event.lengthComputable) {
+                        const percentComplete = (event.loaded / event.total) * 100;
+                        progressBar.style.width = `${percentComplete.toFixed(2)}%`;
+                        progressBar.textContent = `${percentComplete.toFixed(2)}%`;
+                    }
+                };
+
+                xhr.onload = () => {
+                    if (xhr.status === 200) {
+                        alert('¡Archivos subidos correctamente!');
+                        location.reload();
+                    } else {
+                        alert('Error al subir los archivos.');
+                    }
+                };
+
+                xhr.send(formData);
+            } catch (error) {
+                console.error('Error durante la subida de archivos:', error);
+                alert('Hubo un problema al subir los archivos.');
+            } finally {
+                progressModal.hide();
+            }
+        });
     </script>
 </body>
 </html>
