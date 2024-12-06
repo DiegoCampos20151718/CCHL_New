@@ -1,92 +1,78 @@
-<!DOCTYPE html>
 <?php
+// Inicio de sesión
 session_start();
-if (!isset($_SESSION)) {
-    session_start();
-}
-if (!isset($_SESSION['cchl']['rol']) || ($_SESSION['cchl']['rol'] != 1 && $_SESSION['cchl']['rol'] != 2)) {
+if (!isset($_SESSION['cchl']['rol']) || !in_array($_SESSION['cchl']['rol'], [1, 2])) {
     header('location: index.php');
     exit;
 }
 
-// Función para obtener carpetas y archivos
-function listFoldersAndFiles($dir) {
-    $items = [];
-    if (is_dir($dir)) {
-        foreach (scandir($dir) as $item) {
-            if ($item === '.' || $item === '..') continue;
-            $path = $dir . DIRECTORY_SEPARATOR . $item;
-            if (is_dir($path)) {
-                $items[] = [
-                    'type' => 'folder',
-                    'name' => $item,
-                    'contents' => listFoldersAndFiles($path)
-                ];
-            } elseif (pathinfo($item, PATHINFO_EXTENSION) === 'pdf') {
-                $items[] = [
-                    'type' => 'file',
-                    'name' => $item
-                ];
-            }
-        }
-    }
-    return $items;
+// Conexión a la base de datos
+$pdo = new PDO('mysql:host=localhost;dbname=cchl', 'root', '');
+
+// Función para buscar información del folio
+function getFolioInfo($pdo, $folio) {
+    $stmt = $pdo->prepare("SELECT * FROM siap WHERE folio = :folio");
+    $stmt->bindParam(':folio', $folio);
+    $stmt->execute();
+    return $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
-// Obtener estructura del directorio
-$certificadosPath = 'assets/Certificados';
-$foldersAndFiles = listFoldersAndFiles($certificadosPath);
+// Verificar si el folio fue enviado por AJAX
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'validateFolio') {
+    $folio = trim($_POST['folio']);
+    $folioInfo = getFolioInfo($pdo, $folio);
 
-// Renderizar lista de carpetas y archivos
-function renderFolderList($items) {
-    $html = '';
-    foreach ($items as $item) {
-        if ($item['type'] === 'folder') {
-            $html .= '<li class="list-group-item">';
-            $html .= '<strong>' . htmlspecialchars($item['name']) . '</strong>';
-            $html .= '<form method="POST" class="d-inline" action="delete.php">
-                        <input type="hidden" name="path" value="assets/Certificados/' . htmlspecialchars($item['name']) . '">
-                        <button type="submit" class="btn btn-danger btn-sm ms-2">Eliminar</button>
-                      </form>';
-            $html .= '<ul class="list-group ms-4">';
-            $html .= renderFolderList($item['contents']);
-            $html .= '</ul>';
-            $html .= '</li>';
-        } elseif ($item['type'] === 'file') {
-            $html .= '<li class="list-group-item">';
-            $html .= '<a href="assets/Certificados/' . htmlspecialchars($item['name']) . '" target="_blank">' . htmlspecialchars($item['name']) . '</a>';
-            $html .= '</li>';
-        }
+    if ($folioInfo) {
+        echo json_encode(['exists' => true, 'data' => $folioInfo]);
+    } else {
+        echo json_encode(['exists' => false]);
     }
-    return $html;
+    exit;
 }
-
-// Manejo de la subida de archivos
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['folderName']) && isset($_FILES['pdfFiles'])) {
     $folderName = preg_replace('/[^a-zA-Z0-9_-]/', '', $_POST['folderName']); // Sanitizar nombre de carpeta
     $targetDir = "assets/Certificados/$folderName/";
 
     // Crear directorio si no existe
-    if (!is_dir($targetDir)) {
-        mkdir($targetDir, 0777, true);
-    }
-
-    // Guardar archivos subidos
-    foreach ($_FILES['pdfFiles']['tmp_name'] as $index => $tmpName) {
-        $originalName = $_POST['originalNames'][$index]; // Nombre original enviado desde el formulario
-        $newName = $_POST['newNames'][$index]; // Nombre nuevo proporcionado por el usuario
-        $sanitizedNewName = preg_replace('/[^a-zA-Z0-9_-]/', '', pathinfo($newName, PATHINFO_FILENAME)) . '.pdf'; // Sanitizar nombre nuevo
-
-        $targetFile = $targetDir . basename($sanitizedNewName);
-
-        if (move_uploaded_file($tmpName, $targetFile)) {
-            echo "<p>Archivo '$originalName' guardado como '$sanitizedNewName' en '$targetDir'</p>";
-        } else {
-            echo "<p>Error al guardar el archivo '$originalName'.</p>";
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['folderName']) && isset($_FILES['pdfFiles'])) {
+        // Se toma el folio como nombre de la carpeta
+        $folderName = trim($_POST['folderName']);
+        
+        // Sanitizamos el nombre de la carpeta
+        $folderName = preg_replace('/[^a-zA-Z0-9_-]/', '', $folderName);
+        $targetDir = "assets/Certificados/$folderName/";
+    
+        // Crear directorio si no existe
+        if (!is_dir($targetDir)) {
+            mkdir($targetDir, 0777, true);
         }
-    }
+    
+        // Validamos si los nombres de los archivos están presentes
+        if (isset($_POST['originalNames']) && isset($_POST['newNames']) &&
+            is_array($_POST['originalNames']) && is_array($_POST['newNames'])) {
+            
+            // Guardar archivos subidos
+            foreach ($_FILES['pdfFiles']['tmp_name'] as $index => $tmpName) {
+                $originalName = $_POST['originalNames'][$index] ?? 'desconocido'; // Valor por defecto
+                $newName = $_POST['newNames'][$index] ?? 'archivo_' . time(); // Valor por defecto
+                $sanitizedNewName = preg_replace('/[^a-zA-Z0-9_-]/', '', pathinfo($newName, PATHINFO_FILENAME)) . '.pdf'; // Sanitizar nombre nuevo
+    
+                $targetFile = $targetDir . basename($sanitizedNewName);
+    
+                if (move_uploaded_file($tmpName, $targetFile)) {
+                    echo "<p>Archivo '$originalName' guardado como '$sanitizedNewName' en '$targetDir'</p>";
+                } else {
+                    echo "<p>Error al guardar el archivo '$originalName'.</p>";
+                }
+            }
+        } else {
+            echo "<p>Error: Los nombres de archivo no fueron enviados correctamente.</p>";
+        }
+    }    
 }
 ?>
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -105,190 +91,314 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['folderName']) && isse
     <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="assets/css/style.css" rel="stylesheet">
 
-    <title>Carga y visualización de certificados</title>
+    <title>Gestión de Certificados</title>
     <style>
         body {
             background-color: #f8f9fa;
             font-family: 'Nunito', sans-serif;
         }
-        h1, h2 {
-            font-size: 1.8rem;
-            font-weight: 600;
-            color: #333;
-        }
+        .hidden { display: none; }
+
+        #loadingSpinner {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+}
+
+
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/spin.js/2.3.2/spin.min.js"></script>
+
 </head>
 <body>
-     <!-- ======= Header ======= -->
-     <?php include_once 'page-format/header.php'; ?>
-    <!-- End Header -->
-
-    <!-- ======= Sidebar ======= -->
+    <!-- Header -->
+    <?php include_once 'page-format/header.php'; ?>
+    <!-- Sidebar -->
     <?php include_once 'page-format/sidebar.php'; ?>
-    <!-- End Sidebar -->
-     <!-- Modal para "Cursos y certificados" -->
-    <div class="modal fade" id="certificadosModal" tabindex="-1" aria-labelledby="certificadosModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="certificadosModalLabel">Cursos y certificados</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <ul id="folderList" class="list-group">
-                        <?= renderFolderList($foldersAndFiles); ?>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Modal para la barra de progreso -->
-    <div class="modal fade" id="progressModal" tabindex="-1" aria-labelledby="progressModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="progressModalLabel">Subiendo Archivos...</h5>
-                </div>
-                <div class="modal-body">
-                    <div class="progress">
-                        <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <main id="main" class="main container mt-9">
-        <h1 class="text-center mb-4">Carga de certificados</h1>
-        <div class="p-4 bg-light rounded mb-4">
-            <div class="mb-3">
-                <label for="folderName" class="form-label">Nombre del curso</label>
-                <input type="text" id="folderName" class="form-control" placeholder="Ingresa el nombre" required>
-            </div>
-            <button id="selectFolder" class="btn btn-primary w-100 mb-3">
-                <i class="bi bi-folder"></i> Selecciona la carpeta con los PDF's
-            </button>
+    <main id="main" class="main container mt-4">
+        <h1 class="text-center mb-4">Gestión de Certificados</h1>
+
+        <!-- Sección de búsqueda de folio -->
+        <div class="bg-light p-4 rounded mb-4">
+            <label for="folioInput" class="form-label">Ingrese el folio</label>
+            <input type="text" id="folioInput" class="form-control mb-3" placeholder="Folio" required>
+            <button id="searchFolio" class="btn btn-primary w-100">Buscar Folio</button>
+            <input type="text" id="folderNameInput" class="form-control hidden" placeholder="Nombre de la carpeta" />
+
+        </div>
+
+        <!-- Sección de detalles del folio -->
+        <div id="folioDetails" class="hidden">
+            <h2>Detalles del Folio</h2>
+            <ul class="list-group">
+                <li class="list-group-item"><strong>Folio:</strong> <span id="folio"></span></li>
+                <li class="list-group-item"><strong>Estatus:</strong> <span id="estatus"></span></li>
+                <li class="list-group-item"><strong>Descripción:</strong> <span id="descrip"></span></li>
+                <li class="list-group-item"><strong>Tipo:</strong> <span id="tipo"></span></li>
+                <li class="list-group-item"><strong>Fecha Inicio:</strong> <span id="iniProgra"></span></li>
+                <li class="list-group-item"><strong>Fecha Fin:</strong> <span id="finProgra"></span></li>
+            </ul>
+        </div>
+
+        <!-- Botones para subir archivos -->
+        <div id="uploadSection" class="hidden mt-4">
+            <h3>Subir Certificados PDF</h3>
+            <button id="selectFolder" class="btn btn-primary w-100 mb-3">Seleccionar Carpeta con PDFs</button>
             <button id="uploadFiles" class="btn btn-success w-100 hidden">Guardar los PDFs</button>
         </div>
-        <ul id="fileList" class="list-group mt-4"></ul>
+        <div id="loadingSpinner" style="display: none; text-align: center;"></div>
 
-        <!-- Sección de visualización de carpetas y PDFs -->
-        <h2 class="text-center mb-4">Cursos y certificados</h2>
-        <ul id="folderList" class="list-group">
-            <?= renderFolderList($foldersAndFiles); ?>
-        </ul>
+
+        <ul id="fileList" class="list-group mt-4"></ul>
     </main>
 
     <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-
     <script>
-        const showCertificadosButton = document.getElementById('showCertificados');
-        const certificadosModal = new bootstrap.Modal(document.getElementById('certificadosModal'));
-
-        // Mostrar el modal al hacer clic en el botón
-        showCertificadosButton.addEventListener('click', () => {
-            certificadosModal.show();
-        });
-    </script>
-    <script>
-        const selectFolderButton = document.getElementById('selectFolder');
+        
+        
+        
+        const folioInput = document.getElementById('folioInput');
+        const searchFolioButton = document.getElementById('searchFolio');
+        const folioDetails = document.getElementById('folioDetails');
+        const uploadSection = document.getElementById('uploadSection');
         const uploadFilesButton = document.getElementById('uploadFiles');
-        const folderNameInput = document.getElementById('folderName');
+        const selectFolderButton = document.getElementById('selectFolder');
         const fileList = document.getElementById('fileList');
-        const progressModal = new bootstrap.Modal(document.getElementById('progressModal'));
-        const progressBar = document.getElementById('progressBar');
 
-        let selectedFiles = [];
-
-        selectFolderButton.addEventListener('click', async () => {
-            try {
-                const folderHandle = await window.showDirectoryPicker();
-                selectedFiles = [];
-                fileList.innerHTML = '';
-
-                for await (const [name, handle] of folderHandle.entries()) {
-                    if (handle.kind === 'file' && name.endsWith('.pdf')) {
-                        const file = await handle.getFile();
-                        selectedFiles.push(file);
-
-                        const listItem = document.createElement('li');
-                        listItem.className = 'list-group-item d-flex align-items-center';
-
-                        const input = document.createElement('input');
-                        input.type = 'text';
-                        input.className = 'form-control me-2';
-                        input.value = name.replace('.pdf', ''); // Nombre sin extensión
-                        input.dataset.originalName = name;
-
-                        const label = document.createElement('span');
-                        label.textContent = '.pdf';
-
-                        listItem.appendChild(input);
-                        listItem.appendChild(label);
-                        fileList.appendChild(listItem);
-                    }
-                }
-
-                if (selectedFiles.length > 0) {
-                    uploadFilesButton.classList.remove('hidden');
-                } else {
-                    alert('No se encontraron archivos PDF en la carpeta seleccionada.');
-                }
-            } catch (error) {
-                console.error('Error al seleccionar la carpeta:', error);
-            }
-        });
-
-        uploadFilesButton.addEventListener('click', async () => {
-            const folderName = folderNameInput.value.trim();
-            if (!folderName) {
-                alert('Por favor, ingresa un nombre para la carpeta.');
+        searchFolioButton.addEventListener('click', async () => {
+            const folio = folioInput.value.trim();
+            if (!folio) {
+                alert('Por favor, ingresa un folio.');
                 return;
             }
 
-            const formData = new FormData();
-            formData.append('folderName', folderName);
-
-            const inputs = fileList.querySelectorAll('input');
-            selectedFiles.forEach((file, index) => {
-                formData.append('pdfFiles[]', file);
-                formData.append('originalNames[]', inputs[index].dataset.originalName); // Nombre original
-                formData.append('newNames[]', inputs[index].value.trim() + '.pdf'); // Nuevo nombre
-            });
-
-            progressModal.show();
-            progressBar.style.width = '0%';
-            progressBar.textContent = '0%';
-
             try {
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', '<?= $_SERVER['PHP_SELF']; ?>', true);
+                const response = await fetch('<?= $_SERVER['PHP_SELF']; ?>', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'validateFolio', folio })
+                });
 
-                xhr.upload.onprogress = (event) => {
-                    if (event.lengthComputable) {
-                        const percentComplete = (event.loaded / event.total) * 100;
-                        progressBar.style.width = `${percentComplete.toFixed(2)}%`;
-                        progressBar.textContent = `${percentComplete.toFixed(2)}%`;
-                    }
-                };
+                const data = await response.json();
+                if (data.exists) {
+                    // Mostrar detalles del folio
+                    folioDetails.querySelector('#folio').textContent = data.data.folio;
+                    folioDetails.querySelector('#estatus').textContent = data.data.estatus || 'N/A';
+                    folioDetails.querySelector('#descrip').textContent = data.data.descrip || 'N/A';
+                    folioDetails.querySelector('#tipo').textContent = data.data.tipo || 'N/A';
+                    folioDetails.querySelector('#iniProgra').textContent = data.data.iniProgra || 'N/A';
+                    folioDetails.querySelector('#finProgra').textContent = data.data.finProgra || 'N/A';
 
-                xhr.onload = () => {
-                    if (xhr.status === 200) {
-                        alert('¡Archivos subidos correctamente!');
-                        location.reload();
-                    } else {
-                        alert('Error al subir los archivos.');
-                    }
-                };
-
-                xhr.send(formData);
+                    folioDetails.classList.remove('hidden');
+                    uploadSection.classList.remove('hidden');
+                } else {
+                    alert('Folio no encontrado.');
+                    folioDetails.classList.add('hidden');
+                    uploadSection.classList.add('hidden');
+                }
             } catch (error) {
-                console.error('Error durante la subida de archivos:', error);
-                alert('Hubo un problema al subir los archivos.');
-            } finally {
-                progressModal.hide();
+                console.error('Error buscando el folio:', error);
+                alert('Hubo un error buscando el folio.');
             }
         });
+
+
+// Configurar el botón de selección de carpeta
+let selectedFiles = [];  // Definimos la variable selectedFiles
+
+// Configurar el botón de selección de carpeta
+selectFolderButton.addEventListener('click', async () => {
+    try {
+        const folderHandle = await window.showDirectoryPicker();
+        const files = [];
+        fileList.innerHTML = '';  // Limpiamos la lista de archivos mostrados
+
+        // Limpiamos los archivos seleccionados anteriores
+        selectedFiles = [];
+
+        for await (const [name, handle] of folderHandle.entries()) {
+            console.log(handle.kind, name);  // Depurar tipo de archivo y nombre
+
+            // Comprobamos si es un archivo PDF, ignorando mayúsculas/minúsculas
+            if (handle.kind === 'file' && name.toLowerCase().endsWith('.pdf')) {
+                const file = await handle.getFile();
+                selectedFiles.push(file);  // Agregamos el archivo a la lista de archivos seleccionados
+
+                const listItem = document.createElement('li');
+                listItem.className = 'list-group-item d-flex align-items-center';
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'form-control me-2';
+                input.value = name.replace('.pdf', '');  // Nombre sin la extensión
+
+                const label = document.createElement('span');
+                label.textContent = '.pdf';
+
+                listItem.appendChild(input);
+                listItem.appendChild(label);
+                fileList.appendChild(listItem);
+            }
+        }
+
+        // Verificar si hemos encontrado archivos PDF
+        if (selectedFiles.length > 0) {
+            uploadFilesButton.classList.remove('hidden');
+        } else {
+            alert('No se encontraron archivos PDF en la carpeta seleccionada.');
+        }
+    } catch (error) {
+        console.error('Error seleccionando carpeta:', error);
+    }
+});
+
+        searchFolioButton.addEventListener('click', async () => {
+    const folio = folioInput.value.trim();
+    if (!folio) {
+        alert('Por favor, ingresa un folio.');
+        return;
+    }
+
+    try {
+        const response = await fetch('<?= $_SERVER['PHP_SELF']; ?>', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ action: 'validateFolio', folio })
+        });
+
+        const data = await response.json();
+        if (data.exists) {
+            // Mostrar detalles del folio
+            folioDetails.querySelector('#folio').textContent = data.data.folio;
+            folioDetails.querySelector('#estatus').textContent = data.data.estatus || 'N/A';
+            folioDetails.querySelector('#descrip').textContent = data.data.descrip || 'N/A';
+            folioDetails.querySelector('#tipo').textContent = data.data.tipo || 'N/A';
+            folioDetails.querySelector('#iniProgra').textContent = data.data.iniProgra || 'N/A';
+            folioDetails.querySelector('#finProgra').textContent = data.data.finProgra || 'N/A';
+
+            folioDetails.classList.remove('hidden');
+            uploadSection.classList.remove('hidden');
+
+            // Establecer el nombre de la carpeta al valor del folio
+            document.getElementById('folderNameInput').value = data.data.folio;
+        } else {
+            alert('Folio no encontrado.');
+            folioDetails.classList.add('hidden');
+            uploadSection.classList.add('hidden');
+        }
+    } catch (error) {
+        console.error('Error buscando el folio:', error);
+        alert('Hubo un error buscando el folio.');
+    }
+});
+
+// Subir los archivos seleccionados
+// Subir los archivos seleccionados
+uploadFilesButton.addEventListener('click', async () => {
+    const folderName = folioInput.value.trim(); // Usamos el folio como nombre de la carpeta
+    if (!folderName) {
+        alert('Por favor, ingresa un nombre para la carpeta.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('folderName', folderName);
+
+    // Agregamos los archivos seleccionados a la solicitud
+    selectedFiles.forEach((file, index) => {
+        const inputs = fileList.querySelectorAll('input');
+        formData.append('pdfFiles[]', file);
+        formData.append('originalNames[]', inputs[index].dataset.originalName); // Nombre original
+        formData.append('newNames[]', inputs[index].value.trim() + '.pdf'); // Nuevo nombre
+    });
+
+    try {
+        const response = await fetch('<?= $_SERVER['PHP_SELF']; ?>', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (response.ok) {
+            alert('¡Archivos subidos correctamente!');
+            location.reload();
+        } else {
+            alert('Error al subir los archivos.');
+        }
+    } catch (error) {
+        console.error('Error durante la subida de archivos:', error);
+        alert('Hubo un problema al subir los archivos.');
+    }
+});
+// Configurar el spinner de Spin.js
+var spinner = new Spinner({
+    lines: 13, // número de líneas
+    length: 28, // longitud de las líneas
+    width: 14, // grosor de las líneas
+    radius: 42, // radio
+    color: '#000', // color
+    speed: 1, // velocidad
+    trail: 60, // desvanecimiento de las líneas
+    shadow: true, // sombra
+    hwaccel: true, // aceleración de hardware
+}).spin(document.getElementById('loadingSpinner'));
+
+// Función para mostrar el spinner
+function showSpinner() {
+    document.getElementById('loadingSpinner').style.display = 'block'; // Mostrar el spinner
+}
+
+// Función para ocultar el spinner
+function hideSpinner() {
+    document.getElementById('loadingSpinner').style.display = 'none'; // Ocultar el spinner
+}
+
+// Subir los archivos seleccionados
+uploadFilesButton.addEventListener('click', async () => {
+    const folderName = folioInput.value.trim(); // Usamos el folio como nombre de la carpeta
+    if (!folderName) {
+        alert('Por favor, ingresa un nombre para la carpeta.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('folderName', folderName);
+
+    // Agregamos los archivos seleccionados a la solicitud
+    selectedFiles.forEach((file, index) => {
+        const inputs = fileList.querySelectorAll('input');
+        formData.append('pdfFiles[]', file);
+        formData.append('originalNames[]', inputs[index].dataset.originalName); // Nombre original
+        formData.append('newNames[]', inputs[index].value.trim() + '.pdf'); // Nuevo nombre
+    });
+
+    // Mostrar el spinner antes de comenzar la subida
+    showSpinner();
+
+    try {
+        const response = await fetch('<?= $_SERVER['PHP_SELF']; ?>', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (response.ok) {
+            alert('¡Archivos subidos correctamente!');
+            location.reload();
+        } else {
+            alert('Error al subir los archivos.');
+        }
+    } catch (error) {
+        console.error('Error durante la subida de archivos:', error);
+        alert('Hubo un problema al subir los archivos.');
+    } finally {
+        // Ocultar el spinner una vez terminada la subida
+        hideSpinner();
+    }
+});
+
+
     </script>
 </body>
 </html>
