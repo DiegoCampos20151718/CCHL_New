@@ -177,15 +177,30 @@ $('#result').empty();
 }
 
 $(document).on('click', '.generarCCHL', function () {
-  var matricula = $(this).data('matricula');
-  var folioCCHL = $(this).data('foliosiap');
-  win = window.open('cchl-pdf.php?folioCCHL='+folioCCHL+'&matricula='+matricula,'_blank');
-  $(win.document).ready(function(){
-    var matricula = $('#matricula').val();
-    buscarCCHLs(matricula);
-    //alert("SU CCHL HA SIDO DESCARGADO");
 
-  });
-  
+var matricula = $(this).data('matricula');
+var folioCCHL = $(this).data('foliosiap');
+var filePath = "assets/Certificados/" + folioCCHL + "/" + matricula + ".pdf"; // Ruta del PDF
+
+// Abre el PDF en una nueva ventana
+win = window.open(filePath, '_blank'); 
+
+$.ajax({
+  url: 'fetch/actualizarDescarga.php',  // Asegúrate de que esta ruta es correcta
+  type: 'POST',
+  data: { matricula: matricula, folioCCHL: folioCCHL },
+  dataType: 'json',
+  success: function(response) {
+    if(response.status === 'success') {
+      
+    }
+  },
+  error: function(jqXHR, textStatus, errorThrown) {
+    alert('Hubo un error al procesar la solicitud.');
+  }
 });
+
+
+});
+
 </script>

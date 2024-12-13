@@ -173,16 +173,22 @@ if(isset($_POST['matricula'])){
 		<th>FECHA DE FIN</th>
 		<th>CONSTANCIA</th>
 		</thead><tbody>';
+
 		foreach ($query as $row ) {
+			$filePath = "assets/Certificados/" . $row[0] . "/" . $matricula . ".pdf"; // Ruta del PDF
+
 			$table.= '<tr>';
 			$table.= '<td>'.$row[1].'</td>';
 			$table.= '<td>'.$row[2].'</td>';
 			$table.= '<td>'.$row[3].'</td>';
 			if($row[4] != 0 && $row[5] == 1){
 				if($row[6]==1){
-					$table.= '<td><a class="generarCCHL btn btn-success" data-matricula="'.$_POST['matricula'].'" data-foliosiap="'.$row[0].'"><i class="bi bi-check-all"></i></a></td>';
+				 // $table .= '<td><a class="generarCCHL btn btn-success" href="' . $filePath . '" target="_blank" data-matricula="'.$_POST['matricula'].'" data-foliosiap="'.$row[0].'" download><i class="bi bi-check-all"></i> Descargar</a></td>';
+					$table .= '<td><a class="generarCCHL btn btn-success" href="' . $filePath . '" target="_blank" data-matricula="' . $_POST['matricula'] . '" data-foliosiap="' . $row[0] . '" download><i class="bi bi-check-all"></i> Descargar</a></td>';
+
+					
 				}else{
-					$table.= '<td><a class="generarCCHL btn btn-warning" data-matricula="'.$_POST['matricula'].'" data-foliosiap="'.$row[0].'"><i class="bi bi-cloud-arrow-down"></i></a></td>';
+					$table .= '<td><a class="generarCCHL btn btn-warning" href="' . $filePath . '" data-matricula="'.$_POST['matricula'].'" data-foliosiap="'.$row[0].'" download><i class="bi bi-cloud-arrow-down"></i> Descargar</a></td>';
 				}
 				
 			}else{
@@ -206,4 +212,22 @@ if(isset($_POST['buscarOcupacionE'])){
 	$row = $query->fetch(PDO::FETCH_NUM);
 	echo $row[0];
 }
+
+if (isset($_POST['actualizarDescarga'])) {
+    $data = array();
+    $db = new Database();
+
+    try {
+        $query = $db->connect()->prepare('UPDATE cchl_participantes SET DESCARGADO = 1 WHERE MATRICULA = :matricula AND NUMCONTROL = :numcontrol');
+        $query->execute(['matricula' => $_POST['matricula'], 'numcontrol' => $_POST['numcontrol']]);
+        $data['status'] = true;
+        $data['message'] = "Estado de descarga actualizado con éxito.";
+    } catch (Exception $e) {
+        $data['status'] = false;
+        $data['message'] = "Error al actualizar el estado de descarga: " . $e->getMessage();
+    }
+
+    echo json_encode($data);
+}
+
 ?>
