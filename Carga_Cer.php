@@ -12,24 +12,36 @@ $pdo = new PDO('mysql:host=localhost;dbname=cchl', 'root', '');
 // Función para buscar información del folio
 function getFolioInfo($pdo, $folio)
 {
-    $stmt = $pdo->prepare("SELECT * FROM siap WHERE folio = :folio");
-    $stmt->bindParam(':folio', $folio);
-    $stmt->execute();
-    return $stmt->fetch(PDO::FETCH_ASSOC);
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM cchl_validacion WHERE nocontrol = :folio");
+        $stmt->bindParam(':folio', $folio, PDO::PARAM_STR); // Especificar el tipo de parámetro
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        // Log de errores (no enviar mensajes detallados al cliente)
+        error_log("Database error: " . $e->getMessage());
+        return false;
+    }
 }
 
-// Verificar si el folio fue enviado por AJAX
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'validateFolio') {
-    $folio = trim($_POST['folio']);
+    $folio = isset($_POST['folio']) ? trim($_POST['folio']) : '';
+
+    if (empty($folio)) {
+        echo json_encode(['exists' => false, 'error' => 'Folio no proporcionado']);
+        exit;
+    }
+
     $folioInfo = getFolioInfo($pdo, $folio);
 
     if ($folioInfo) {
         echo json_encode(['exists' => true, 'data' => $folioInfo]);
     } else {
-        echo json_encode(['exists' => false]);
+        echo json_encode(['exists' => false, 'error' => 'Folio no encontrado']);
     }
     exit;
 }
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['folderName']) && isset($_FILES['pdfFiles'])) {
     $folderName = preg_replace('/[^a-zA-Z0-9_-]/', '', $_POST['folderName']); // Sanitizar nombre de carpeta
     $targetDir = "assets/Certificados/$folderName/";
@@ -351,12 +363,13 @@ summary {
         <div id="folioDetails" class="hidden">
     <h2>Detalles del Folio</h2>
     <ul class="list-group">
-        <li class="list-group-item w-50"><strong>Folio:</strong> <span id="folio"></span></li>
-        <li class="list-group-item w-50"><strong>Estatus:</strong> <span id="estatus"></span></li>
-        <li class="list-group-item w-50"><strong>Descripción:</strong> <span id="descrip"></span></li>
-        <li class="list-group-item w-50"><strong>Tipo:</strong> <span id="tipo"></span></li>
-        <li class="list-group-item w-50"><strong>Fecha Inicio:</strong> <span id="iniProgra"></span></li>
-        <li class="list-group-item w-50"><strong>Fecha Fin:</strong> <span id="finProgra"></span></li>
+        <li class="list-group-item w-50"><strong>No. Control:</strong> <span id="nocontrol"></span></li>
+        <li class="list-group-item w-50"><strong>Estatus:</strong> <span id="status"></span></li>
+        <li class="list-group-item w-50"><strong>Plan Formativo:</strong> <span id="planFormativo"></span></li>
+        <li class="list-group-item w-50"><strong>Nombre Plan Formativo:</strong> <span id="nombrePlanFormativo"></span></li>
+        <li class="list-group-item w-50"><strong>Área Solicitante:</strong> <span id="areaSolicitante"></span></li>
+        <li class="list-group-item w-50"><strong>Fecha Inicio:</strong> <span id="fInicio"></span></li>
+        <li class="list-group-item w-50"><strong>Fecha Fin:</strong> <span id="fTermino"></span></li>
     </ul>
 </div>
 </div>
@@ -479,50 +492,66 @@ closeModal.addEventListener('click', () => {
 });
 
 
-        const folioInput = document.getElementById('folioInput');
-        const searchFolioButton = document.getElementById('searchFolio');
-        const folioDetails = document.getElementById('folioDetails');
-        const uploadSection = document.getElementById('uploadSection');
-        const uploadFilesButton = document.getElementById('uploadFiles');
-        const selectFolderButton = document.getElementById('selectFolder');
-        const fileList = document.getElementById('fileList');
+const folioInput = document.getElementById('folioInput');
+const searchFolioButton = document.getElementById('searchFolio');
+const folioDetails = document.getElementById('folioDetails');
+const uploadSection = document.getElementById('uploadSection');
 
-        searchFolioButton.addEventListener('click', async () => {
-            const folio = folioInput.value.trim();
-            if (!folio) {
-                alert('Por favor, ingresa un folio.');
-                return;
-            }
+// Función para mostrar detalles del folio
+function showFolioDetails(data) {
+    document.querySelector('#nocontrol').textContent = data.nocontrol || 'N/A';
+    document.querySelector('#status').textContent = data.status || 'N/A';
+    document.querySelector('#planFormativo').textContent = data.planFormativo || 'N/A';
+    document.querySelector('#nombrePlanFormativo').textContent = data.nombrePlanFormativo || 'N/A';
+    document.querySelector('#areaSolicitante').textContent = data.areaSolicitante || 'N/A';
+    document.querySelector('#fInicio').textContent = data.fInicio || 'N/A';
+    document.querySelector('#fTermino').textContent = data.fTermino || 'N/A';
 
-            try {
-                const response = await fetch('<?= $_SERVER['PHP_SELF']; ?>', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ action: 'validateFolio', folio })
-                });
+    folioDetails.classList.remove('hidden');
+    uploadSection.classList.remove('hidden');
+}
 
-                const data = await response.json();
-                if (data.exists) {
-                    // Mostrar detalles del folio
-                    folioDetails.querySelector('#folio').textContent = data.data.folio;
-                    folioDetails.querySelector('#estatus').textContent = data.data.estatus || 'N/A';
-                    folioDetails.querySelector('#descrip').textContent = data.data.descrip || 'N/A';
-                    folioDetails.querySelector('#tipo').textContent = data.data.tipo || 'N/A';
-                    folioDetails.querySelector('#iniProgra').textContent = data.data.iniProgra || 'N/A';
-                    folioDetails.querySelector('#finProgra').textContent = data.data.finProgra || 'N/A';
+// Función para ocultar detalles del folio
+function hideFolioDetails() {
+    folioDetails.classList.add('hidden');
+    uploadSection.classList.add('hidden');
+}
 
-                    folioDetails.classList.remove('hidden');
-                    uploadSection.classList.remove('hidden');
-                } else {
-                    alert('Folio no encontrado.');
-                    folioDetails.classList.add('hidden');
-                    uploadSection.classList.add('hidden');
-                }
-            } catch (error) {
-                console.error('Error buscando el folio:', error);
-                alert('Hubo un error buscando el folio.');
-            }
+// Evento al buscar folio
+searchFolioButton.addEventListener('click', async () => {
+    const folio = folioInput.value.trim();
+
+    if (!folio) {
+        alert('Por favor, ingresa un folio.');
+        return;
+    }
+
+    try {
+        const response = await fetch('<?= $_SERVER['PHP_SELF']; ?>', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ action: 'validateFolio', folio })
         });
+
+        if (!response.ok) {
+            throw new Error('Error en la respuesta del servidor');
+        }
+
+        const data = await response.json();
+
+        if (data.exists) {
+            showFolioDetails(data.data);
+        } else {
+            alert('Folio no encontrado.');
+            hideFolioDetails();
+        }
+    } catch (error) {
+        console.error('Error buscando el folio:', error);
+        alert('Hubo un error al buscar el folio. Inténtalo de nuevo más tarde.');
+        hideFolioDetails();
+    }
+});
+
 
 
         // Configurar el botón de selección de carpeta
@@ -591,12 +620,13 @@ closeModal.addEventListener('click', () => {
                 const data = await response.json();
                 if (data.exists) {
                     // Mostrar detalles del folio
-                    folioDetails.querySelector('#folio').textContent = data.data.folio;
-                    folioDetails.querySelector('#estatus').textContent = data.data.estatus || 'N/A';
-                    folioDetails.querySelector('#descrip').textContent = data.data.descrip || 'N/A';
-                    folioDetails.querySelector('#tipo').textContent = data.data.tipo || 'N/A';
-                    folioDetails.querySelector('#iniProgra').textContent = data.data.iniProgra || 'N/A';
-                    folioDetails.querySelector('#finProgra').textContent = data.data.finProgra || 'N/A';
+                    document.querySelector('#nocontrol').textContent = data.nocontrol || 'N/A';
+    document.querySelector('#status').textContent = data.status || 'N/A';
+    document.querySelector('#planFormativo').textContent = data.planFormativo || 'N/A';
+    document.querySelector('#nombrePlanFormativo').textContent = data.nombrePlanFormativo || 'N/A';
+    document.querySelector('#areaSolicitante').textContent = data.areaSolicitante || 'N/A';
+    document.querySelector('#fInicio').textContent = data.fInicio || 'N/A';
+    document.querySelector('#fTermino').textContent = data.fTermino || 'N/A';
 
                     folioDetails.classList.remove('hidden');
                     uploadSection.classList.remove('hidden');
