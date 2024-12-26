@@ -1,6 +1,6 @@
 <?php
 include_once 'fetch/database.php';
-session_start();
+
 if (!isset($_SESSION)) { 
   session_start(); 
 } 
@@ -80,10 +80,15 @@ $conn->close();
   <link href="assets/vendor/simple-datatables/style.css" rel="stylesheet">
   <link href="assets/vendor/dropzone/dropzone.min.css" rel="stylesheet" />
   <link href="assets/css/style.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
   <style>
       .hidden {
             display: none;
         }
+        #nocontrol {
+  width: 160px; /* Ajusta el tamaño según sea necesario */
+}
   </style>
 </head>
 
@@ -96,69 +101,90 @@ $conn->close();
     <div class="container">
       <h1>Carga de certificados</h1>
       <form id="consultForm" method="POST" action="">
-          <div class="mb-3">
-              <label for="nocontrol" class="form-label">Número de Control:</label>
-              <input type="text" id="nocontrol" name="nocontrol" class="form-control" required>
-          </div>
-          <button type="submit" class="btn btn-primary">Consultar</button>
-      </form>
+    <div class="d-flex align-items-center mb-3">
+        <label for="nocontrol" class="form-label me-2">Número de Control:</label>
+        <input type="text" id="nocontrol" name="nocontrol" class="form-control me-2" maxlength="15" required style="width: 200px;">
+        <button type="submit" class="btn btn-primary">Consultar</button>
+    </div>
+</form>
 
-      <?php if ($errorMessage): ?>
-          <div class="alert alert-danger mt-3"><?php echo $errorMessage; ?></div>
-      <?php endif; ?>
 
       <?php if ($errorMessage): ?>
                 <div class="alert alert-danger mt-3"><?php echo $errorMessage; ?></div>
             <?php endif; ?>
 
             <?php if ($data): ?>
-            <div id="folioDetails" class="hidden" data-nocontrol="<?php echo htmlspecialchars($data['nocontrol']); ?>"
-                data-status="<?php echo htmlspecialchars($data['status']); ?>" data-plan="<?php echo htmlspecialchars($data['planFormativo']); ?>"
-                data-nombreplan="<?php echo htmlspecialchars($data['nombrePlanFormativo']); ?>" data-area="<?php echo htmlspecialchars($data['areaSolicitante']); ?>"
-                data-finicio="<?php echo htmlspecialchars($data['fInicio']); ?>" data-ftermino="<?php echo htmlspecialchars($data['fTermino']); ?>">
-                <h2 class="mt-5">Información del Curso</h2>
-                <table class="table table-bordered">
-                    <tr>
-                        <th>No. Control</th>
-                        <td id="nocontrolDetail"></td>
-                    </tr>
-                    <tr>
-                        <th>Estatus</th>
-                        <td id="statusDetail"></td>
-                    </tr>
-                    <tr>
-                        <th>Plan Formativo</th>
-                        <td id="planDetail"></td>
-                    </tr>
-                    <tr>
-                        <th>Nombre del Plan Formativo</th>
-                        <td id="nombreplanDetail"></td>
-                    </tr>
-                    <tr>
-                        <th>Área Solicitante</th>
-                        <td id="areaDetail"></td>
-                    </tr>
-                    <tr>
-                        <th>Fecha de Inicio</th>
-                        <td id="finicioDetail"></td>
-                    </tr>
-                    <tr>
-                        <th>Fecha de Fin</th>
-                        <td id="fterminoDetail"></td>
-                    </tr>
-                </table>
+                <div id="folioDetails" class="hidden" data-nocontrol="<?php echo htmlspecialchars($data['nocontrol']); ?>"
+    data-status="<?php echo htmlspecialchars($data['status']); ?>" data-plan="<?php echo htmlspecialchars($data['planFormativo']); ?>"
+    data-nombreplan="<?php echo htmlspecialchars($data['nombrePlanFormativo']); ?>" data-area="<?php echo htmlspecialchars($data['areaSolicitante']); ?>"
+    data-finicio="<?php echo htmlspecialchars($data['fInicio']); ?>" data-ftermino="<?php echo htmlspecialchars($data['fTermino']); ?>">
+    <h2 class="mt-5">Información del Curso</h2>
 
-                <!-- Botones -->
-                <div class="mt-4">
-                    <button id="uploadCertificatesBtn" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadModal">Subir Certificados</button>
-                    <button id="viewCertificatesBtn" class="btn btn-info">Consultar Carpetas y Certificados Cargados</button>
-                </div>
+    <div class="d-flex align-items-start">
+        <!-- Tabla -->
+        <table class="table table-bordered me-4">
+            <tr>
+                <th>No. Control</th>
+                <td id="nocontrolDetail"></td>
+            </tr>
+            <tr>
+                <th>Estatus</th>
+                <td id="statusDetail"></td>
+            </tr>
+            <tr>
+                <th>Plan Formativo</th>
+                <td id="planDetail"></td>
+            </tr>
+            <tr>
+                <th>Nombre del Plan Formativo</th>
+                <td id="nombreplanDetail"></td>
+            </tr>
+            <tr>
+                <th>Área Solicitante</th>
+                <td id="areaDetail"></td>
+            </tr>
+            <tr>
+                <th>Fecha de Inicio</th>
+                <td id="finicioDetail"></td>
+            </tr>
+            <tr>
+                <th>Fecha de Fin</th>
+                <td id="fterminoDetail"></td>
+            </tr>
+        </table>
 
-                <!-- Contenedor para mostrar certificados cargados -->
-<!-- Aquí se mostrarán las carpetas y archivos -->
-<div id="certificadosList"></div>
+        <!-- Botones -->
+        <div class="d-flex flex-column gap-2">
+            <button id="uploadCertificatesBtn" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadModal">Subir Certificados</button>
+            <button id="viewCertificatesBtn" class="btn btn-info">Consultar Carpetas y Certificados Cargados</button>
+        </div>
+    </div>
 
-            </div>
+    <!-- Contenedor para mostrar certificados cargados -->
+    <div id="certificadosList"></div>
+</div>
+
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="uploadModalLabel">Subir Certificados</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+      <form id="uploadForm" enctype="multipart/form-data">
+    <div class="mb-3">
+        <label for="filesInput" class="form-label">Selecciona los archivos PDF:</label>
+        <input type="file" id="filesInput" name="certificates[]" class="form-control" accept=".pdf" multiple required>
+    </div>
+    <div id="fileList" class="mb-3"></div>
+    <button type="button" class="btn btn-primary" id="saveFilesBtn">Guardar Archivos</button>
+</form>
+</div>
+</div>
+</div>
+</div>
+
             <!-- Modal para mostrar las carpetas y archivos -->
 <div class="modal fade" id="certificadosModal" tabindex="-1" aria-labelledby="certificadosModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">

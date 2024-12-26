@@ -22,11 +22,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const nocontrol = detailsElement.getAttribute('data-nocontrol');
                 if (nocontrol) {
                     // Redirigir a la página para subir certificados
-                    const popup = window.open(
-                        'upload_certificates.php?nocontrol=' + encodeURIComponent(nocontrol),
-                        'Subir Certificados',
-                        'width=800,height=600'
-                    );
+                    
 
                     // Verificar si el popup se abrió correctamente
                     if (!popup) {
