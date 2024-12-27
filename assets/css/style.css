@@ -28,6 +28,9 @@ a:hover {
   color: #717ff5;
   text-decoration: none;
 }
+.hidden {
+  display: none;
+}
 
 h1,
 h2,

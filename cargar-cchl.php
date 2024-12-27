@@ -21,7 +21,9 @@ if(!isset($_SESSION['cchl']['rol'])){
   <title>Cargar CCHL's</title>
   <meta content="" name="description">
   <meta content="" name="keywords">
-
+  <link
+        href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700|Nunito:300,400,600,700|Poppins:300,400,500,600,700"
+        rel="stylesheet">
   <!-- Favicons -->
   <link href="assets/img/imss-green-icon.png" rel="icon">
   <link href="assets/img/apple-touch-icon.png" rel="apple-touch-icon">
