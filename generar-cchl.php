@@ -10,7 +10,8 @@ if(!isset($_SESSION['cchl']['rol'])){
   if($_SESSION['cchl']['rol'] != 1){
     header('location: index.php');
   }
-}?>
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 
@@ -39,17 +40,9 @@ if(!isset($_SESSION['cchl']['rol'])){
   <link href="assets/vendor/remixicon/remixicon.css" rel="stylesheet">
   <link href="assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
-
   <!-- Template Main CSS File -->
   <link href="assets/css/style.css" rel="stylesheet">
 
-  <!-- =======================================================
-  * Template Name: NiceAdmin
-  * Updated: Aug 30 2023 with Bootstrap v5.3.1
-  * Template URL: https://bootstrapmade.com/nice-admin-bootstrap-admin-html-template/
-  * Author: BootstrapMade.com
-  * License: https://bootstrapmade.com/license/
-  ======================================================== -->
 </head>
 
 <body id="pagina" data-value="generarcchl">
@@ -86,25 +79,12 @@ if(!isset($_SESSION['cchl']['rol'])){
             <div class="col-xxl-12 col-md-12">
               <div class="card info-card sales-card">
 
-                <!--<div class="filter">
-                  <a class="icon" href="#" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></a>
-                  <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-                    <li class="dropdown-header text-start">
-                      <h6>Filter</h6>
-                    </li>
-
-                    <li><a class="dropdown-item" href="#">Today</a></li>
-                    <li><a class="dropdown-item" href="#">This Month</a></li>
-                    <li><a class="dropdown-item" href="#">This Year</a></li>
-                  </ul>
-                </div>-->
-
                 <div class="card-body form-group">
                   <h5 class="card-title"> GENERADOR DE CCHL <span>(CONSTANCIAS DE COMPETENCIAS Y HABILIDADES LABORALES)</span></h5>
                   <div class="row">
                     <div class="col-lg-3">
                       <label>Buscar por Folio SIAP:</label>
-                      <input type="text" class="form-control form-control-sm"  id="folioSIAP">
+                      <input type="text" class="form-control form-control-sm" id="folioSIAP">
                     </div>
                     <div class="col-lg-2 align-self-center">
                       <button class="btn btn-sm btn-primary mt-4" id="buscar">BUSCAR</button>
@@ -112,26 +92,20 @@ if(!isset($_SESSION['cchl']['rol'])){
                   </div>
                   <div class="row justify-content-center mt-2">
                     <div class="col-6">
-                      <div id="alertas" style="display: none;">
-                      </div>
+                      <div id="alertas" style="display: none;"></div>
                     </div>
                   </div>
-                  <div class="row mt-2" id="result">
-
-                  </div>
-
+                  <div class="row mt-2" id="result"></div>
+                  <div class="col-12 d-flex justify-content-end">
+  <button class="btn btn-sm btn-outline-info rounded-pill" id="downloadCertificates">Descargar Certificados</button>
+</div>
                 </div>
-                
 
               </div>
             </div><!-- End Sales Card -->
 
-
-
-
           </div>
         </div><!-- End Left side columns -->
-
 
       </div>
     </section>
@@ -193,129 +167,117 @@ if(!isset($_SESSION['cchl']['rol'])){
 
   <!-- Vendor JS Files -->
   <script src="assets/js/jquery-3.7.1.min.js"></script>
-  <script src="assets/vendor/apexcharts/apexcharts.min.js"></script>
   <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/vendor/chart.js/chart.umd.js"></script>
-  <script src="assets/vendor/echarts/echarts.min.js"></script>
-  <script src="assets/vendor/quill/quill.min.js"></script>
   <script src="assets/vendor/simple-datatables/simple-datatables.js"></script>
-  <script src="assets/vendor/tinymce/tinymce.min.js"></script>
-  <script src="assets/vendor/php-email-form/validate.js"></script>
-
 
   <!-- Template Main JS File -->
   <script src="assets/js/main.js"></script>
-</body>
-
-</html>
-<script type="text/javascript">  
-
-$(document).on('click', '#buscar', function () {
-  buscarParticipantes($('#folioSIAP').val());
-});
-
-function buscarParticipantes(folioSIAP){
-  $('#result').empty();
-  $('#alertas').hide();
-  $('#alertas').removeClass();
-  $('#alertas').text("");
-  $('#result').empty();
-  if(folioSIAP == ""){
-    $('#alertas').show();
-    $('#alertas').addClass('alert alert-danger text-center');
-    $('#alertas').text("Introduce un Folio SIAP válido");
-  }else{
-    $.ajax({
+  
+  <script type="text/javascript">  
+    $(document).on('click', '#buscar', function () {
+      var folioSIAP = $('#folioSIAP').val();
+      $.ajax({
         url: 'fetch/fetchSIAP.php',
         type: 'post',
-        data: {buscarfolio:folioSIAP},
+        data: { action: 'buscarFolio', buscarfolio: folioSIAP },
         dataType: 'json',
-        success:function(data){
-          if(data.state){
-            $('#result').html(data.content);
-          }else{
-            $('#alertas').show();
-            $('#alertas').addClass('alert alert-danger text-center');
-            $('#alertas').text(data.message);
+        success: function(response) {
+          if (response.state) {
+            $('#result').html(response.content);
+          } else {
+            $('#alertas').show().addClass('alert alert-danger text-center').text(response.message);
           }
         }
+      });
     });
-  }
-}
 
-
-$(document).on('click', '#editarInstructor', function () {
-  $('#modalInstructor').modal('show');
-  var folioSIAP = $('#folioc').text();
-  $.ajax({
+    $(document).on('click', '#downloadCertificates', function () {
+    var folioSIAP = $('#folioSIAP').val();
+    if (folioSIAP) {
+      $.ajax({
         url: 'fetch/fetchSIAP.php',
         type: 'post',
-        data: {buscarInstructor:folioSIAP},
+        data: { action: 'downloadCertificatesByFolio', folioSIAP: folioSIAP },
         dataType: 'json',
-        success:function(data){
+        success: function(response) {
+          if (response.state) {
+            window.open(response.url, '_blank');
+          } else {
+            alert(response.message);
+          }
+        }
+      });
+    } else {
+      alert("Por favor, ingrese un Folio SIAP válido.");
+    }
+  });
+
+    $(document).on('click', '#editarInstructor', function () {
+      $('#modalInstructor').modal('show');
+      var folioSIAP = $('#folioc').text();
+      $.ajax({
+        url: 'fetch/fetchSIAP.php',
+        type: 'post',
+        data: { action: 'buscarInstructor', buscarInstructor: folioSIAP },
+        dataType: 'json',
+        success: function(data){
           $('#instructor').val(data.instructor);
           $('#capacitador').val(data.capacitador);
           $('#rfc').val(data.rfc);
-          /*if(data.state){
-            $('#result').html(data.content);
-          }else{
-            $('#alertas').show();
-            $('#alertas').addClass('alert alert-danger text-center');
-            $('#alertas').text(data.message);
-          }*/
         }
-  });
-});
+      });
+    });
 
-$(document).on('click', '#guardarInstructor', function () {
-  var folioSIAP = $('#folioc').text();
-  var instructor = $('#instructor').val();
-  var capacitador = $('#capacitador').val();
-  var rfc = $('#rfc').val();
-  if(folioSIAP == "" || instructor == "0" || instructor == "" || capacitador == "" || rfc == ""){
-    alert("Complete los datos del instructor");
-  }else{
-    $.ajax({
+    $(document).on('click', '#guardarInstructor', function () {
+      var folioSIAP = $('#folioc').text();
+      var instructor = $('#instructor').val();
+      var capacitador = $('#capacitador').val();
+      var rfc = $('#rfc').val();
+      if(folioSIAP == "" || instructor == "0" || instructor == "" || capacitador == "" || rfc == ""){
+        alert("Complete los datos del instructor");
+      }else{
+        $.ajax({
           url: 'fetch/fetchSIAP.php',
           type: 'post',
-          data: {modificarInstructor:folioSIAP, instructor:instructor, capacitador:capacitador, rfc:rfc},
+          data: { action: 'modificarInstructor', modificarInstructor: folioSIAP, instructor: instructor, capacitador: capacitador, rfc: rfc },
           dataType: 'json',
-          success:function(data){
-            /*$('#instructor').val(data.instructor);
-            $('#capacitador').val(data.capacitador);
-            $('#rfc').val(data.rfc);*/
+          success: function(data){
             alert(data.message);
             if(data.status){
               $('#modalInstructor').modal('hide');
               buscarParticipantes(folioSIAP);
             }
           }
+        });
+      }
     });
-  }
-});
 
-$('#guardarInstructor').on('hidden.bs.modal', function () {
-  $('#folioc').text() = "";
-  $('#instructor').val() = "";
-  $('#capacitador').val() = "INSTITUTO MEXICANO DEL SEGURO SOCIAL";
-  $('#rfc').val() = "IMS 421231 I45";
-});
+    $('#guardarInstructor').on('hidden.bs.modal', function () {
+      $('#folioc').text("");
+      $('#instructor').val("");
+      $('#capacitador').val("INSTITUTO MEXICANO DEL SEGURO SOCIAL");
+      $('#rfc').val("IMS 421231 I45");
+    });
 
-$(document).on('click', '#imprimirCCHL', function () {
-  var folioSIAP = $('#folioc').text();
-  window.open("cchl-pdf.php?folioCCHL="+folioSIAP,'_blank');
-});
+    $(document).on('click', '#imprimirCCHL', function () {
+      var folioSIAP = $('#folioc').text();
+      window.open("cchl-pdf.php?folioCCHL="+folioSIAP,'_blank');
+    });
 
-$(document).on('click', '#enviarCorreo', function () {
-  var folioSIAP = $('#folioc').text();
-  $.ajax({
+    $(document).on('click', '#enviarCorreo', function () {
+      var folioSIAP = $('#folioc').text();
+      $.ajax({
         url: 'mailing.php',
         type: 'post',
-        data: {emailCurso:folioSIAP},
+        data: { emailCurso: folioSIAP },
         dataType: 'json',
-        success:function(data){
-         alert(data.message);
+        success: function(data){
+          alert(data.message);
         }
-  });
-});
-</script>
+      });
+    });
+  </script>
+
+</body>
+
+</html>

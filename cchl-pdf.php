@@ -4,7 +4,7 @@ ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 require_once 'vendor/autoload.php';
 require_once 'fetch/database.php';
-include('vendor/phpqrcode/qrlib.php');
+// include('vendor/phpqrcode/qrlib.php');
         
     
 if(isset($_GET['folioCCHL']) && isset($_GET['matricula'])){
@@ -19,69 +19,69 @@ if(isset($_GET['folioCCHL']) && isset($_GET['matricula'])){
             WHERE CP.NUMCONTROL = :buscarfolio AND CP.MATRICULA = :matricula AND CP.CALIFICACION >= 80');
     $query->execute(['buscarfolio' => $_GET['folioCCHL'], 'matricula' => $_GET['matricula']]);
     
-    // /********crear codigos qr*/
-    // $queryF = $db->connect()->prepare('SELECT CV.nocontrol, CV.nombrePlanFormativo, CV.ftermino, CV.horas, I.nombre, I.grado_estudio, U.unidad, I.instructor_hab, I.folio_constancia, I.fecha_constancia FROM cchl_validacion CV 
-    //     LEFT JOIN instructores I ON CV.instructor = I.id
-    //     LEFT JOIN unidades U ON I.centro_lab = U.id
-    //     WHERE nocontrol = :buscarfolio ');
-    // $queryF->execute(['buscarfolio' => $_GET['folioCCHL']]);
-    // $firmas = $queryF->fetch(PDO::FETCH_NUM);
+    /********crear codigos qr*/
+    $queryF = $db->connect()->prepare('SELECT CV.nocontrol, CV.nombrePlanFormativo, CV.ftermino, CV.horas, I.nombre, I.grado_estudio, U.unidad, I.instructor_hab, I.folio_constancia, I.fecha_constancia FROM cchl_validacion CV 
+        LEFT JOIN instructores I ON CV.instructor = I.id
+        LEFT JOIN unidades U ON I.centro_lab = U.id
+        WHERE nocontrol = :buscarfolio ');
+    $queryF->execute(['buscarfolio' => $_GET['folioCCHL']]);
+    $firmas = $queryF->fetch(PDO::FETCH_NUM);
 
-    // $param = "cualquier texto"; // remember to sanitize that - it is user input!
-    // // we need to be sure ours script does not output anything!!!
-    // // otherwise it will break up PNG binary!
-    // ob_start("callback");
-    // // here DB request or some processing
-    // $codeText = 'DEMO - '.$_GET['id'];
-    // $karla = '{
-    //   "Folio": "'.$firmas[0].'",
-    //   "Nombre Curso": "'.$firmas[1].'",
-    //   "Fecha Fin": "'.$firmas[2].'",
-    //   "Horas": "'.$firmas[3].'",
-    //   "Matricula Instructor": "11304987",
-    //   "Nombre Instructor": "LIC. KARLA TERESA LÓPEZ ÁLVAREZ",
-    //   "Grado de Estudio": "LICENCIANDA EN PSICOLOGIA",
-    //   "Cargo": "TITULAR DEL DEPARTAMENTO DE CAPACITACIÓN Y TRANSPARENCIA",
-    //   "Centro Laboral": "SEDE DELAGACIONAL",
-    //   "Representante de la Subcomision Mixta de Capacitacion ": "INSTITUCIONAL",
-    //   "Fecha de Acta Constitutiva": "01 de noviembre de 2023"
-    // }';
-    // $estefania = '{
-    //   "Folio": "'.$firmas[0].'",
-    //   "Nombre Curso": "'.$firmas[1].'",
-    //   "Fecha Fin": "'.$firmas[2].'",
-    //   "Horas": "'.$firmas[3].'",
-    //   "Matricula Instructor": "99012377",
-    //   "Nombre Instructor": "ING. ESTEFANIA ACEVEDO VALADEZ",
-    //   "Grado de Estudio": "INGENIERA INDUSTRIAL",
-    //   "Cargo": "5TA CATEGORIA ESPECIALISTA DE PERSONAL",
-    //   "Centro Laboral": "SEDE DELAGACIONAL",
-    //   "Representante de la Subcomision Mixta de Capacitacion ": "SINDICAL",
-    //   "Fecha de Acta Constitutiva": "01 de noviembre de 2023"
-    // }';
-    // $instructor = '{
-    //   "Folio": "'.$firmas[0].'",
-    //   "Nombre Curso": "'.$firmas[1].'",
-    //   "Fecha Fin": "'.$firmas[2].'",
-    //   "Horas": "'.$firmas[3].'",
-    //   "Nombre Instructor":  "'.$firmas[4].'",
-    //   "Grado de Estudio":  "'.$firmas[5].'",
-    //   "Centro Laboral":  "'.$firmas[6].'",
-    //   "Instructor Habilitado":  "'.$firmas[7].'",
-    //   "Folio de Constancia":  "'.$firmas[8].'",
-    //   "Fecha de Constancia":  "'.$firmas[9].'"
-    // }';
-    // // end of processing here
-    // $debugLog = ob_get_contents();
-    // ob_end_clean();
-    // // outputs image directly into browser, as PNG stream
-    // if (!file_exists("assets/temporaryqr/".$_GET['folioCCHL'])) {
-    //     mkdir("assets/temporaryqr/".$_GET['folioCCHL'], 0777, true);
-    // }
+    $param = "cualquier texto"; // remember to sanitize that - it is user input!
+    // we need to be sure ours script does not output anything!!!
+    // otherwise it will break up PNG binary!
+    ob_start("callback");
+    // here DB request or some processing
+    $codeText = 'DEMO - '.$_GET['id'];
+    $karla = '{
+      "Folio": "'.$firmas[0].'",
+      "Nombre Curso": "'.$firmas[1].'",
+      "Fecha Fin": "'.$firmas[2].'",
+      "Horas": "'.$firmas[3].'",
+      "Matricula Instructor": "11304987",
+      "Nombre Instructor": "LIC. KARLA TERESA LÓPEZ ÁLVAREZ",
+      "Grado de Estudio": "LICENCIANDA EN PSICOLOGIA",
+      "Cargo": "TITULAR DEL DEPARTAMENTO DE CAPACITACIÓN Y TRANSPARENCIA",
+      "Centro Laboral": "SEDE DELAGACIONAL",
+      "Representante de la Subcomision Mixta de Capacitacion ": "INSTITUCIONAL",
+      "Fecha de Acta Constitutiva": "01 de noviembre de 2023"
+    }';
+    $estefania = '{
+      "Folio": "'.$firmas[0].'",
+      "Nombre Curso": "'.$firmas[1].'",
+      "Fecha Fin": "'.$firmas[2].'",
+      "Horas": "'.$firmas[3].'",
+      "Matricula Instructor": "99012377",
+      "Nombre Instructor": "ING. ESTEFANIA ACEVEDO VALADEZ",
+      "Grado de Estudio": "INGENIERA INDUSTRIAL",
+      "Cargo": "5TA CATEGORIA ESPECIALISTA DE PERSONAL",
+      "Centro Laboral": "SEDE DELAGACIONAL",
+      "Representante de la Subcomision Mixta de Capacitacion ": "SINDICAL",
+      "Fecha de Acta Constitutiva": "01 de noviembre de 2023"
+    }';
+    $instructor = '{
+      "Folio": "'.$firmas[0].'",
+      "Nombre Curso": "'.$firmas[1].'",
+      "Fecha Fin": "'.$firmas[2].'",
+      "Horas": "'.$firmas[3].'",
+      "Nombre Instructor":  "'.$firmas[4].'",
+      "Grado de Estudio":  "'.$firmas[5].'",
+      "Centro Laboral":  "'.$firmas[6].'",
+      "Instructor Habilitado":  "'.$firmas[7].'",
+      "Folio de Constancia":  "'.$firmas[8].'",
+      "Fecha de Constancia":  "'.$firmas[9].'"
+    }';
+    // end of processing here
+    $debugLog = ob_get_contents();
+    ob_end_clean();
+    // outputs image directly into browser, as PNG stream
+    if (!file_exists("assets/temporaryqr/".$_GET['folioCCHL'])) {
+        mkdir("assets/temporaryqr/".$_GET['folioCCHL'], 0777, true);
+    }
     // QRcode::png($karla, "assets/temporaryqr/".$_GET['folioCCHL']."/karla.png", QR_ECLEVEL_M);
     // QRcode::png($estefania, "assets/temporaryqr/".$_GET['folioCCHL']."/estefania.png", QR_ECLEVEL_M);
     // QRcode::png($instructor, "assets/temporaryqr/".$_GET['folioCCHL']."/instructor.png", QR_ECLEVEL_M);
-    // /********fin de codigos qr*/
+    /********fin de codigos qr*/
 
     $pdf = new \setasign\Fpdi\Fpdi();
     foreach ($query as $row) {
@@ -94,12 +94,12 @@ if(isset($_GET['folioCCHL']) && isset($_GET['matricula'])){
         $pdf->useTemplate($tplIdx, 0, 0);
         $pdf->SetFont('ARIAL','B');
         $pdf->SetFontSize(14);
-        $pdf->text(34.54,75,utf8_decode($row[2])." ".utf8_decode($row[3])." ".utf8_decode($row[4]));
+        $pdf->text(34.54, 75, mb_convert_encoding($row[2] . " " . $row[3] . " " . $row[4], 'ISO-8859-1', 'UTF-8'));
         $pdf->SetFont('ARIAL');
         $pdf->SetFontSize(14);
-        $pdf->text(167.39,75,$row['0']);//matricula
-        $pdf->text(34.04,89.50,$row['1']);//curp
-        $pdf->text(147.32,89.25,$row['6']);//ocupacion especifica
+        $pdf->text(167.39, 75, mb_convert_encoding($row[0], 'ISO-8859-1', 'UTF-8')); // matricula
+        $pdf->text(34.04, 89.50, mb_convert_encoding($row[1], 'ISO-8859-1', 'UTF-8')); // curp
+        $pdf->text(147.32, 89.25, mb_convert_encoding($row[6], 'ISO-8859-1', 'UTF-8')); // ocupacion especifica
             
         $pdf->text(66,174.88,$row['12']);//horas del curso
         $pdf->text(64.26,185.05,$row['13']);//clave tematica
@@ -123,17 +123,17 @@ if(isset($_GET['folioCCHL']) && isset($_GET['matricula'])){
         $pdf->SetY(155); 
         $pdf->Cell(10);
             
-        $pdf->MultiCell(180,7,utf8_decode($row['9']),0,'C');//nombre curso
+        $pdf->MultiCell(180, 7, mb_convert_encoding($row[9], 'ISO-8859-1', 'UTF-8'), 0, 'C'); // nombre curso
             
         $pdf->SetFont('ARIAL');
         $pdf->SetY(193); 
         $pdf->Cell(10);
-        $pdf->MultiCell(180,7,utf8_decode($row['15']),0,'C');//nombre capacitador
+        $pdf->MultiCell(180, 7, mb_convert_encoding($row[15], 'ISO-8859-1', 'UTF-8'), 0, 'C'); // nombre capacitador
         $pdf->SetFont('ARIAL');
 
         $pdf->SetY(94); 
         $pdf->Cell(10);
-        $pdf->MultiCell(180,7,$row['5'],0,'C');//CATEGORIA PUESTO
+        $pdf->MultiCell(180, 7, mb_convert_encoding($row[5], 'ISO-8859-1', 'UTF-8'), 0, 'C'); // categoria puesto
             
         $pdf->SetFont('ARIAL','B');
         $pdf->SetFontSize(10);
@@ -144,20 +144,20 @@ if(isset($_GET['folioCCHL']) && isset($_GET['matricula'])){
         $pdf->SetFontSize(10);
         $pdf->SetY(255); 
         $pdf->Cell(6);
-        $pdf->MultiCell(60,4,utf8_decode($row['14']),0,'C');//INSTRUCTOR
-        $pdf->Image('assets/temporaryqr/'.$_GET['folioCCHL'].'/instructor.png', 33, 224, -250);
+        $pdf->MultiCell(60, 4, mb_convert_encoding($row['14'], 'ISO-8859-1', 'UTF-8'), 0, 'C'); // INSTRUCTOR
+        // $pdf->Image('assets/temporaryqr/'.$_GET['folioCCHL'].'/instructor.png', 33, 224, -250);
             
         $pdf->SetFontSize(10);
         $pdf->SetY(255); 
         $pdf->Cell(72);
-        $pdf->MultiCell(60,4,utf8_decode('LIC. KARLA TERESA LOPEZ ALVAREZ'),0,'C');//PATRON O REPRESENTANTE LEGAR
-        $pdf->Image('assets/temporaryqr/'.$_GET['folioCCHL'].'/karla.png', 93, 224, -250);
+        $pdf->MultiCell(60, 4, mb_convert_encoding('LIC. KARLA TERESA LOPEZ ALVAREZ', 'ISO-8859-1', 'UTF-8'), 0, 'C'); // PATRON O REPRESENTANTE LEGAL
+        // $pdf->Image('assets/temporaryqr/'.$_GET['folioCCHL'].'/karla.png', 93, 224, -250);
 
         $pdf->SetFontSize(10);
         $pdf->SetY(255); 
         $pdf->Cell(132);
-        $pdf->MultiCell(60,4,utf8_decode('ING. ESTEFANIA ACEVEDO VALADEZ'),0,'C');//REPRESENTANTE DE LOS TRABAJADORES
-        $pdf->Image('assets/temporaryqr/'.$_GET['folioCCHL'].'/estefania.png', 153, 224,-250);
+        $pdf->MultiCell(60, 4, mb_convert_encoding('ING. ESTEFANIA ACEVEDO VALADEZ', 'ISO-8859-1', 'UTF-8'), 0, 'C'); // REPRESENTANTE DE LOS TRABAJADORES
+        // $pdf->Image('assets/temporaryqr/'.$_GET['folioCCHL'].'/estefania.png', 153, 224,-250);
 
         
     }
