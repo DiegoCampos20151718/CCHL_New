@@ -90,15 +90,16 @@ if(!isset($_SESSION['cchl']['rol'])){
                       <button class="btn btn-sm btn-primary mt-4" id="buscar">BUSCAR</button>
                     </div>
                   </div>
+                  <div class="col-12 d-flex justify-content-end">
+                    <button class="btn btn-sm btn-outline-info rounded-pill" id="downloadCertificates">Descargar Certificados</button>
+                  </div>
                   <div class="row justify-content-center mt-2">
                     <div class="col-6">
                       <div id="alertas" style="display: none;"></div>
                     </div>
                   </div>
                   <div class="row mt-2" id="result"></div>
-                  <div class="col-12 d-flex justify-content-end">
-  <button class="btn btn-sm btn-outline-info rounded-pill" id="downloadCertificates">Descargar Certificados</button>
-</div>
+                  
                 </div>
 
               </div>
@@ -171,112 +172,150 @@ if(!isset($_SESSION['cchl']['rol'])){
   <script src="assets/vendor/simple-datatables/simple-datatables.js"></script>
 
   <!-- Template Main JS File -->
-  <script src="assets/js/main.js"></script>
-  
-  <script type="text/javascript">  
+  <script type="text/javascript">
     $(document).on('click', '#buscar', function () {
-      var folioSIAP = $('#folioSIAP').val();
-      $.ajax({
-        url: 'fetch/fetchSIAP.php',
-        type: 'post',
-        data: { action: 'buscarFolio', buscarfolio: folioSIAP },
-        dataType: 'json',
-        success: function(response) {
-          if (response.state) {
-            $('#result').html(response.content);
-          } else {
-            $('#alertas').show().addClass('alert alert-danger text-center').text(response.message);
-          }
-        }
-      });
+        var folioSIAP = $('#folioSIAP').val();
+        $.ajax({
+            url: 'fetch/fetchSIAP.php',
+            type: 'post',
+            data: { action: 'buscarFolio', buscarfolio: folioSIAP },
+            dataType: 'json',
+            success: function(response) {
+                if (response.state) {
+                    $('#result').html(response.content);
+                    // Mostrar el botón "Descargar Certificados"
+                    $('#downloadCertificates').show();
+                } else {
+                    $('#alertas').show().addClass('alert alert-danger text-center').text(response.message);
+                    // Ocultar el botón "Descargar Certificados" si la búsqueda falla
+                    $('#downloadCertificates').hide();
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error en la solicitud AJAX:', error);
+                console.log(xhr.responseText);
+                // Ocultar el botón "Descargar Certificados" si hay un error en la búsqueda
+                $('#downloadCertificates').hide();
+            }
+        });
     });
 
     $(document).on('click', '#downloadCertificates', function () {
-    var folioSIAP = $('#folioSIAP').val();
-    if (folioSIAP) {
-      $.ajax({
-        url: 'fetch/fetchSIAP.php',
-        type: 'post',
-        data: { action: 'downloadCertificatesByFolio', folioSIAP: folioSIAP },
-        dataType: 'json',
-        success: function(response) {
-          if (response.state) {
-            window.open(response.url, '_blank');
-          } else {
-            alert(response.message);
-          }
+        var folioSIAP = $('#folioSIAP').val();
+        if (folioSIAP) {
+            $.ajax({
+                url: 'fetch/fetchSIAP.php',
+                type: 'post',
+                data: { action: 'downloadCertificatesByFolio', folioSIAP: folioSIAP },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.state) {
+                        // Descargar el archivo ZIP
+                        var link = document.createElement('a');
+                        link.href = response.url;
+                        link.download = folioSIAP + '.zip';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+
+                        // Hacer solicitud AJAX para eliminar el archivo ZIP después de la descarga
+                        $.ajax({
+                            url: 'fetch/fetchSIAP.php',
+                            type: 'post',
+                            data: { action: 'deleteZipFile', zipFileName: '../assets/Certificados/' + response.url },
+                            dataType: 'json',
+                            success: function(deleteResponse) {
+                                
+                            },
+                            error: function(xhr, status, error) {
+
+                            }
+                        });
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error en la solicitud AJAX:', error);
+                    console.log(xhr.responseText);
+                }
+            });
+        } else {
+            alert("Por favor, ingrese un Folio SIAP válido.");
         }
-      });
-    } else {
-      alert("Por favor, ingrese un Folio SIAP válido.");
-    }
-  });
+    });
 
     $(document).on('click', '#editarInstructor', function () {
-      $('#modalInstructor').modal('show');
-      var folioSIAP = $('#folioc').text();
-      $.ajax({
-        url: 'fetch/fetchSIAP.php',
-        type: 'post',
-        data: { action: 'buscarInstructor', buscarInstructor: folioSIAP },
-        dataType: 'json',
-        success: function(data){
-          $('#instructor').val(data.instructor);
-          $('#capacitador').val(data.capacitador);
-          $('#rfc').val(data.rfc);
-        }
-      });
+        $('#modalInstructor').modal('show');
+        var folioSIAP = $('#folioc').text();
+        $.ajax({
+            url: 'fetch/fetchSIAP.php',
+            type: 'post',
+            data: { action: 'buscarInstructor', buscarInstructor: folioSIAP },
+            dataType: 'json',
+            success: function(data){
+                $('#instructor').val(data.instructor);
+                $('#capacitador').val(data.capacitador);
+                $('#rfc').val(data.rfc);
+            }
+        });
     });
 
     $(document).on('click', '#guardarInstructor', function () {
-      var folioSIAP = $('#folioc').text();
-      var instructor = $('#instructor').val();
-      var capacitador = $('#capacitador').val();
-      var rfc = $('#rfc').val();
-      if(folioSIAP == "" || instructor == "0" || instructor == "" || capacitador == "" || rfc == ""){
-        alert("Complete los datos del instructor");
-      }else{
-        $.ajax({
-          url: 'fetch/fetchSIAP.php',
-          type: 'post',
-          data: { action: 'modificarInstructor', modificarInstructor: folioSIAP, instructor: instructor, capacitador: capacitador, rfc: rfc },
-          dataType: 'json',
-          success: function(data){
-            alert(data.message);
-            if(data.status){
-              $('#modalInstructor').modal('hide');
-              buscarParticipantes(folioSIAP);
-            }
-          }
-        });
-      }
+        var folioSIAP = $('#folioc').text();
+        var instructor = $('#instructor').val();
+        var capacitador = $('#capacitador').val();
+        var rfc = $('#rfc').val();
+        if(folioSIAP == "" || instructor == "0" || instructor == "" || capacitador == "" || rfc == ""){
+            alert("Complete los datos del instructor");
+        } else {
+            $.ajax({
+                url: 'fetch/fetchSIAP.php',
+                type: 'post',
+                data: { action: 'modificarInstructor', modificarInstructor: folioSIAP, instructor: instructor, capacitador: capacitador, rfc: rfc },
+                dataType: 'json',
+                success: function(data){
+                    alert(data.message);
+                    if(data.status){
+                        $('#modalInstructor').modal('hide');
+                        buscarParticipantes(folioSIAP);
+                    }
+                }
+            });
+        }
     });
 
     $('#guardarInstructor').on('hidden.bs.modal', function () {
-      $('#folioc').text("");
-      $('#instructor').val("");
-      $('#capacitador').val("INSTITUTO MEXICANO DEL SEGURO SOCIAL");
-      $('#rfc').val("IMS 421231 I45");
+        $('#folioc').text("");
+        $('#instructor').val("");
+        $('#capacitador').val("INSTITUTO MEXICANO DEL SEGURO SOCIAL");
+        $('#rfc').val("IMS 421231 I45");
     });
 
     $(document).on('click', '#imprimirCCHL', function () {
-      var folioSIAP = $('#folioc').text();
-      window.open("cchl-pdf.php?folioCCHL="+folioSIAP,'_blank');
+        var folioSIAP = $('#folioc').text();
+        window.open("cchl-pdf.php?folioCCHL="+folioSIAP,'_blank');
     });
 
     $(document).on('click', '#enviarCorreo', function () {
-      var folioSIAP = $('#folioc').text();
-      $.ajax({
-        url: 'mailing.php',
-        type: 'post',
-        data: { emailCurso: folioSIAP },
-        dataType: 'json',
-        success: function(data){
-          alert(data.message);
-        }
-      });
+        var folioSIAP = $('#folioc').text();
+        $.ajax({
+            url: 'mailing.php',
+            type: 'post',
+            data: { emailCurso: folioSIAP },
+            dataType: 'json',
+            success: function(data){
+                alert(data.message);
+            }
+        });
     });
-  </script>
+</script>
+
+<style>
+  #downloadCertificates {
+    display: none;
+  }
+</style>
 
 </body>
 
