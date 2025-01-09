@@ -14,9 +14,6 @@ if (isset($_POST['action'])) {
         case 'downloadCertificatesByFolio':
             downloadCertificatesByFolio();
             break;
-        case 'deleteZipFile':
-            deleteZipFile();
-            break;
         default:
             echo json_encode(['state' => false, 'message' => 'Acción no válida']);
     }
@@ -125,27 +122,26 @@ function downloadCertificatesByFolio() {
             $numControl = $row['NUMCONTROL'];
             $matricula = $row['MATRICULA'];
 
-            // Generar el certificado utilizando cchl-pdf.php
+            // Generar el certificado
             $certUrl = "http://localhost/test/cchl-pdf.php?folioCCHL=$numControl&matricula=$matricula";
             $certContent = file_get_contents($certUrl);
             
             if ($certContent) {
-                $certFilePath = "../assets/Certificados/$numControl/$matricula.pdf";
+                $certFilePath = "../assets/Certificados/Certificados_$numControl/$matricula.pdf";
                 if (!file_exists(dirname($certFilePath))) {
                     mkdir(dirname($certFilePath), 0777, true);
                 }
                 file_put_contents($certFilePath, $certContent);
                 $zip->addFile($certFilePath, "{$matricula}.pdf");
 
-                // Añadir el directorio a la lista de directorios a eliminar
-                $directoriesToDelete[] = "../assets/Certificados/$numControl";
+                $directoriesToDelete[] = "../assets/Certificados/Certificados_$numControl";
             }
         }
         
         $zip->close();
 
         if (file_exists($zipFileName)) {
-            // Eliminar los directorios después de generar el ZIP
+            // Eliminar los pdfs después de generar el ZIP
             foreach (array_unique($directoriesToDelete) as $directory) {
                 array_map('unlink', glob("$directory/*.*"));
                 rmdir($directory);
@@ -256,13 +252,13 @@ if(isset($_POST['matricula'])){
         </thead><tbody>';
 
         foreach ($query as $row ) {
-            $filePath = "assets/Certificados/" . $row[0] . "/" . $matricula . ".pdf"; // Ruta del PDF
+            $filePath = "../assets/Certificados/" . $row[0] . "/" . $matricula . ".pdf"; // Ruta del PDF
 
             $table .= '<tr>';
             $table .= '<td>'.$row[1].'</td>';
             $table .= '<td>'.$row[2].'</td>';
             $table .= '<td>'.$row[3].'</td>';
-            if($row[4] != 0 && $row[5] == 1){
+            if(file_exists($filePath)){
                 if($row[6]==1){
                     $table .= '<td><a class="generarCCHL btn btn-success" href="' . $filePath . '" target="_blank" data-matricula="' . $_POST['matricula'] . '" data-foliosiap="' . $row[0] . '" download><i class="bi bi-check-circle"></i></a></td>';
                 }else{

@@ -91,7 +91,7 @@ if(!isset($_SESSION['cchl']['rol'])){
                     </div>
                   </div>
                   <div class="col-12 d-flex justify-content-end">
-                    <button class="btn btn-sm btn-outline-info rounded-pill" id="downloadCertificates">Descargar Certificados</button>
+                    <button class="btn btn-sm btn-primary rounded mt-4" id="downloadCertificates">Descargar Certificados</button>
                   </div>
                   <div class="row justify-content-center mt-2">
                     <div class="col-6">

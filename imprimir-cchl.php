@@ -186,7 +186,7 @@ var filePath = "assets/Certificados/" + folioCCHL + "/" + matricula + ".pdf"; //
 win = window.open(filePath, '_blank'); 
 
 $.ajax({
-  url: 'fetch/actualizarDescarga.php',  // Asegúrate de que esta ruta es correcta
+  url: 'fetch/actualizarDescarga.php',
   type: 'POST',
   data: { matricula: matricula, folioCCHL: folioCCHL },
   dataType: 'json',
