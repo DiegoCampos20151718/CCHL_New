@@ -11,9 +11,6 @@ if (isset($_POST['action'])) {
         case 'buscarFolio':
             buscarFolio();
             break;
-        case 'descargarCertificados':
-            descargarCertificados();
-            break;
         default:
             echo json_encode(['state' => false, 'message' => 'Acción no válida']);
     }
@@ -100,72 +97,6 @@ function buscarFolio() {
         }
     }
     echo json_encode($data);
-}
-
-function descargarCertificados() {
-    try {
-        $folioSIAP = $_POST['folioSIAP'];
-        $db = new Database();
-        $query = $db->connect()->prepare('SELECT CP.NUMCONTROL, CP.MATRICULA FROM cchl_participantes CP WHERE CP.NUMCONTROL = :folioSIAP AND CP.CALIFICACION >= 70');
-        $query->execute(['folioSIAP' => $folioSIAP]);
-
-        if ($query->rowCount() > 0) {
-            require_once '../vendor/autoload.php';
-
-            $pdf = new \setasign\Fpdi\Fpdi();
-            $directoriesToDelete = [];
-
-            foreach ($query as $row) {
-                $numControl = $row['NUMCONTROL'];
-                $matricula = $row['MATRICULA'];
-
-                //Generar el certificado
-                $certUrl = "http://localhost/test/cchl-pdf.php?folioCCHL=$numControl&matricula=$matricula";
-                $certContent = file_get_contents($certUrl);
-
-                if ($certContent) {
-                    $certFilePath = "../assets/Certificados/Certificados_$numControl/$matricula.pdf";
-                    if (!file_exists(dirname($certFilePath))) {
-                        mkdir(dirname($certFilePath), 0777, true);
-                    }
-                    file_put_contents($certFilePath, $certContent);
-
-                    //Directorio temporal
-                    $directoriesToDelete[] = "../assets/Certificados/Certificados_$numControl";
-
-                    //Importar el archivo PDF generado
-                    $pageCount = $pdf->setSourceFile($certFilePath);
-                    for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
-                        $tplIdx = $pdf->importPage($pageNo);
-                        $pdf->AddPage();
-                        $pdf->useTemplate($tplIdx);
-                    }
-                }
-            }
-
-            $outputFilePath = '../assets/Certificados/'.$folioSIAP.'_Certificados.pdf';
-            $pdf->Output('F', $outputFilePath);
-
-            if (file_exists($outputFilePath)) {
-                //Borrar archivos temporales
-                foreach (array_unique($directoriesToDelete) as $directory) {
-                    array_map('unlink', glob("$directory/*.*"));
-                    rmdir($directory);
-                }
-
-                //URL de descarga descarga
-                $pdfUrl = str_replace('../', '', $outputFilePath);
-                echo json_encode(['state' => true, 'url' => $pdfUrl]);
-            } else {
-                throw new Exception('No se pudo generar el archivo PDF combinado.');
-            }
-        } else {
-            throw new Exception('No se encontraron certificados para el folio proporcionado.');
-        }
-    } catch (Exception $e) {
-        echo json_encode(['state' => false, 'message' => $e->getMessage()]);
-    }
-    exit;
 }
 
 if(isset($_POST['buscarInstructor'])){ 

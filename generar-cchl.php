@@ -206,36 +206,9 @@ if(!isset($_SESSION['cchl']['rol'])){
 
     //Descargar todos los certificados
     $(document).on('click', '#downloadCertificates', function () {
-    var folioSIAP = $('#folioSIAP').val();
-    if (folioSIAP) {
-        $.ajax({
-            url: 'fetch/fetchSIAP.php',
-            type: 'post',
-            data: { action: 'descargarCertificados', folioSIAP: folioSIAP },
-            dataType: 'json',
-            success: function(response) {
-                if (response.state) {
-
-                    // Descargar el archivo PDF
-                    var link = document.createElement('a');
-                    link.href = response.url;
-                    link.download = folioSIAP + '_Certificados.pdf';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                } else {
-                    alert(response.message);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error en la solicitud AJAX:', error);
-                console.log(xhr.responseText);
-            }
-        });
-    } else {
-        alert("Por favor, ingrese un Folio SIAP válido.");
-    }
-});
+        var folioSIAP = $('#folioSIAP').val();
+        window.open("cchl-pdf.php?folioCCHL=" + folioSIAP, '_blank');
+    });
 
 $(document).on('click', '#editarInstructor', function () {
   $('#modalInstructor').modal('show');
