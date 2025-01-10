@@ -173,8 +173,7 @@ if(!isset($_SESSION['cchl']['rol'])){
 
   <!-- Template Main JS File -->
   <script type="text/javascript">
-    $(document).on('click', '#buscar', function () {
-        var folioSIAP = $('#folioSIAP').val();
+    function buscarFolioSIAP(folioSIAP) {
         $.ajax({
             url: 'fetch/fetchSIAP.php',
             type: 'post',
@@ -198,117 +197,120 @@ if(!isset($_SESSION['cchl']['rol'])){
                 $('#downloadCertificates').hide();
             }
         });
-    });
+    }
 
-    $(document).on('click', '#downloadCertificates', function () {
+    $(document).on('click', '#buscar', function () {
         var folioSIAP = $('#folioSIAP').val();
-        if (folioSIAP) {
-            $.ajax({
-                url: 'fetch/fetchSIAP.php',
-                type: 'post',
-                data: { action: 'downloadCertificatesByFolio', folioSIAP: folioSIAP },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.state) {
-                        // Descargar el archivo ZIP
-                        var link = document.createElement('a');
-                        link.href = response.url;
-                        link.download = folioSIAP + '.zip';
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-
-                        // Hacer solicitud AJAX para eliminar el archivo ZIP después de la descarga
-                        $.ajax({
-                            url: 'fetch/fetchSIAP.php',
-                            type: 'post',
-                            data: { action: 'deleteZipFile', zipFileName: '../assets/Certificados/' + response.url },
-                            dataType: 'json',
-                            success: function(deleteResponse) {
-                                
-                            },
-                            error: function(xhr, status, error) {
-
-                            }
-                        });
-                    } else {
-                        alert(response.message);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error en la solicitud AJAX:', error);
-                    console.log(xhr.responseText);
-                }
-            });
-        } else {
-            alert("Por favor, ingrese un Folio SIAP válido.");
-        }
+        buscarFolioSIAP(folioSIAP);
     });
 
-    $(document).on('click', '#editarInstructor', function () {
-        $('#modalInstructor').modal('show');
-        var folioSIAP = $('#folioc').text();
+    //Descargar todos los certificados
+    $(document).on('click', '#downloadCertificates', function () {
+    var folioSIAP = $('#folioSIAP').val();
+    if (folioSIAP) {
         $.ajax({
             url: 'fetch/fetchSIAP.php',
             type: 'post',
-            data: { action: 'buscarInstructor', buscarInstructor: folioSIAP },
+            data: { action: 'downloadCertificatesByFolio', folioSIAP: folioSIAP },
             dataType: 'json',
-            success: function(data){
-                $('#instructor').val(data.instructor);
-                $('#capacitador').val(data.capacitador);
-                $('#rfc').val(data.rfc);
-            }
-        });
-    });
+            success: function(response) {
+                if (response.state) {
 
-    $(document).on('click', '#guardarInstructor', function () {
-        var folioSIAP = $('#folioc').text();
-        var instructor = $('#instructor').val();
-        var capacitador = $('#capacitador').val();
-        var rfc = $('#rfc').val();
-        if(folioSIAP == "" || instructor == "0" || instructor == "" || capacitador == "" || rfc == ""){
-            alert("Complete los datos del instructor");
-        } else {
-            $.ajax({
-                url: 'fetch/fetchSIAP.php',
-                type: 'post',
-                data: { action: 'modificarInstructor', modificarInstructor: folioSIAP, instructor: instructor, capacitador: capacitador, rfc: rfc },
-                dataType: 'json',
-                success: function(data){
-                    alert(data.message);
-                    if(data.status){
-                        $('#modalInstructor').modal('hide');
-                        buscarParticipantes(folioSIAP);
-                    }
+                    // Descargar el archivo PDF
+                    var link = document.createElement('a');
+                    link.href = response.url;
+                    link.download = folioSIAP + '_Certificados.pdf';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } else {
+                    alert(response.message);
                 }
-            });
-        }
-    });
-
-    $('#guardarInstructor').on('hidden.bs.modal', function () {
-        $('#folioc').text("");
-        $('#instructor').val("");
-        $('#capacitador').val("INSTITUTO MEXICANO DEL SEGURO SOCIAL");
-        $('#rfc').val("IMS 421231 I45");
-    });
-
-    $(document).on('click', '#imprimirCCHL', function () {
-        var folioSIAP = $('#folioc').text();
-        window.open("cchl-pdf.php?folioCCHL="+folioSIAP,'_blank');
-    });
-
-    $(document).on('click', '#enviarCorreo', function () {
-        var folioSIAP = $('#folioc').text();
-        $.ajax({
-            url: 'mailing.php',
-            type: 'post',
-            data: { emailCurso: folioSIAP },
-            dataType: 'json',
-            success: function(data){
-                alert(data.message);
+            },
+            error: function(xhr, status, error) {
+                console.error('Error en la solicitud AJAX:', error);
+                console.log(xhr.responseText);
             }
         });
+    } else {
+        alert("Por favor, ingrese un Folio SIAP válido.");
+    }
+});
+
+$(document).on('click', '#editarInstructor', function () {
+  $('#modalInstructor').modal('show');
+  var folioSIAP = $('#folioc').text();
+  $.ajax({
+        url: 'fetch/fetchSIAP.php',
+        type: 'post',
+        data: {buscarInstructor:folioSIAP},
+        dataType: 'json',
+        success:function(data){
+          $('#instructor').val(data.instructor);
+          $('#capacitador').val(data.capacitador);
+          $('#rfc').val(data.rfc);
+          /*if(data.state){
+            $('#result').html(data.content);
+          }else{
+            $('#alertas').show();
+            $('#alertas').addClass('alert alert-danger text-center');
+            $('#alertas').text(data.message);
+          }*/
+        }
+  });
+});
+
+$(document).on('click', '#guardarInstructor', function () {
+  var folioSIAP = $('#folioc').text();
+  var instructor = $('#instructor').val();
+  var capacitador = $('#capacitador').val();
+  var rfc = $('#rfc').val();
+  if(folioSIAP == "" || instructor == "0" || instructor == "" || capacitador == "" || rfc == ""){
+    alert("Complete los datos del instructor");
+  }else{
+    $.ajax({
+          url: 'fetch/fetchSIAP.php',
+          type: 'post',
+          data: {modificarInstructor:folioSIAP, instructor:instructor, capacitador:capacitador, rfc:rfc},
+          dataType: 'json',
+          success:function(data){
+            /*$('#instructor').val(data.instructor);
+            $('#capacitador').val(data.capacitador);
+            $('#rfc').val(data.rfc);*/
+            alert(data.message);
+            if(data.status){
+              $('#modalInstructor').modal('hide');
+              buscarFolioSIAP(folioSIAP);
+            }
+          }
     });
+  }
+});
+
+$('#guardarInstructor').on('hidden.bs.modal', function () {
+  $('#folioc').text() = "";
+  $('#instructor').val() = "";
+  $('#capacitador').val() = "INSTITUTO MEXICANO DEL SEGURO SOCIAL";
+  $('#rfc').val() = "IMS 421231 I45";
+});
+
+$(document).on('click', '#imprimirCCHL', function () {
+  var folioSIAP = $('#folioc').text();
+  window.open("cchl-pdf.php?folioCCHL="+folioSIAP,'_blank');
+});
+
+$(document).on('click', '#enviarCorreo', function () {
+  var folioSIAP = $('#folioc').text();
+  $.ajax({
+        url: 'mailing.php',
+        type: 'post',
+        data: {emailCurso:folioSIAP},
+        dataType: 'json',
+        success:function(data){
+         alert(data.message);
+        }
+  });
+});
 </script>
 
 <style>

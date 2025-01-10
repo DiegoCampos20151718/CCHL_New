@@ -105,70 +105,65 @@ function buscarFolio() {
 function downloadCertificatesByFolio() {
     try {
         $folioSIAP = $_POST['folioSIAP'];
-        $zip = new ZipArchive();
-        $zipFileName = '../assets/Certificados/'.$folioSIAP.'.zip';
-        $directoriesToDelete = [];
-
-        // Intentar abrir el archivo ZIP para escribir
-        if ($zip->open($zipFileName, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== TRUE) {
-            throw new Exception("Cannot open <$zipFileName>");
-        }
-
         $db = new Database();
         $query = $db->connect()->prepare('SELECT CP.NUMCONTROL, CP.MATRICULA FROM cchl_participantes CP WHERE CP.NUMCONTROL = :folioSIAP AND CP.CALIFICACION >= 80');
         $query->execute(['folioSIAP' => $folioSIAP]);
 
-        foreach ($query as $row) {
-            $numControl = $row['NUMCONTROL'];
-            $matricula = $row['MATRICULA'];
+        if ($query->rowCount() > 0) {
+            require_once '../vendor/autoload.php';
 
-            // Generar el certificado
-            $certUrl = "http://localhost/test/cchl-pdf.php?folioCCHL=$numControl&matricula=$matricula";
-            $certContent = file_get_contents($certUrl);
-            
-            if ($certContent) {
-                $certFilePath = "../assets/Certificados/Certificados_$numControl/$matricula.pdf";
-                if (!file_exists(dirname($certFilePath))) {
-                    mkdir(dirname($certFilePath), 0777, true);
+            $pdf = new \setasign\Fpdi\Fpdi();
+            $directoriesToDelete = [];
+
+            foreach ($query as $row) {
+                $numControl = $row['NUMCONTROL'];
+                $matricula = $row['MATRICULA'];
+
+                //Generar el certificado
+                $certUrl = "http://localhost/test/cchl-pdf.php?folioCCHL=$numControl&matricula=$matricula";
+                $certContent = file_get_contents($certUrl);
+
+                if ($certContent) {
+                    $certFilePath = "../assets/Certificados/Certificados_$numControl/$matricula.pdf";
+                    if (!file_exists(dirname($certFilePath))) {
+                        mkdir(dirname($certFilePath), 0777, true);
+                    }
+                    file_put_contents($certFilePath, $certContent);
+
+                    //Directorio temporal
+                    $directoriesToDelete[] = "../assets/Certificados/Certificados_$numControl";
+
+                    //Importar el archivo PDF generado
+                    $pageCount = $pdf->setSourceFile($certFilePath);
+                    for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
+                        $tplIdx = $pdf->importPage($pageNo);
+                        $pdf->AddPage();
+                        $pdf->useTemplate($tplIdx);
+                    }
                 }
-                file_put_contents($certFilePath, $certContent);
-                $zip->addFile($certFilePath, "{$matricula}.pdf");
-
-                $directoriesToDelete[] = "../assets/Certificados/Certificados_$numControl";
-            }
-        }
-        
-        $zip->close();
-
-        if (file_exists($zipFileName)) {
-            // Eliminar los pdfs después de generar el ZIP
-            foreach (array_unique($directoriesToDelete) as $directory) {
-                array_map('unlink', glob("$directory/*.*"));
-                rmdir($directory);
             }
 
-            // Devolver la URL del archivo ZIP para la descarga
-            $zipUrl = str_replace('../', '', $zipFileName);
-            echo json_encode(['state' => true, 'url' => $zipUrl]);
+            $outputFilePath = '../assets/Certificados/'.$folioSIAP.'_Certificados.pdf';
+            $pdf->Output('F', $outputFilePath);
+
+            if (file_exists($outputFilePath)) {
+                //Borrar archivos temporales
+                foreach (array_unique($directoriesToDelete) as $directory) {
+                    array_map('unlink', glob("$directory/*.*"));
+                    rmdir($directory);
+                }
+
+                //URL de descarga descarga
+                $pdfUrl = str_replace('../', '', $outputFilePath);
+                echo json_encode(['state' => true, 'url' => $pdfUrl]);
+            } else {
+                throw new Exception('No se pudo generar el archivo PDF combinado.');
+            }
         } else {
-            throw new Exception('No se pudo generar el archivo ZIP.');
+            throw new Exception('No se encontraron certificados para el folio proporcionado.');
         }
     } catch (Exception $e) {
         echo json_encode(['state' => false, 'message' => $e->getMessage()]);
-    }
-    exit;
-}
-
-function deleteZipFile() {
-    $zipFileName = '../assets/Certificados/' . basename($_POST['zipFileName']);
-    if (file_exists($zipFileName)) {
-        if (unlink($zipFileName)) {
-            echo json_encode(['state' => true, 'message' => "Archivo ZIP eliminado."]);
-        } else {
-            echo json_encode(['state' => false, 'message' => "Error al eliminar el archivo ZIP."]);
-        }
-    } else {
-        echo json_encode(['state' => false, 'message' => "Archivo ZIP no encontrado."]);
     }
     exit;
 }
