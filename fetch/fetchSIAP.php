@@ -38,13 +38,14 @@ function buscarFolio() {
         } else {
             $instructor = $row[5];
             $enviarCorreo = '';
+            $data['instructorAssigned'] = $instructor != "0";
             if ($instructor == "0") {
                 $instructor = ' <i class="text-danger">El instructor no ha sido asignado aún</i>';
             } else {
                 if ($row[7] == "0") {
                     $enviarCorreo .= '<i class="text-danger"> El instructor no ha aceptado el Aviso de Privacidad</i>';
                 } else {
-                    $enviarCorreo .= '<i class="text-success"> El instructor aceptó el Aviso de Privacidad</i> <button class="btn btn-sm btn-success" id="enviarCorreo">Enviar notificación <i class="bi bi-envelope-fill"></i></button>';
+                    $enviarCorreo .= '<i class="text-success"> El instructor aceptó el Aviso de Privacidad</i> <button class="btn btn-sm btn-success" id="enviarCorreo">Enviar notificación <i class="ri ri-send-plane-2-fill"></i></button>';
                 }
             }
             $data['state'] = true;

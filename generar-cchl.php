@@ -91,7 +91,7 @@ if(!isset($_SESSION['cchl']['rol'])){
                     </div>
                   </div>
                   <div class="col-12 d-flex justify-content-end">
-                    <button class="btn btn-sm btn-primary rounded mt-4" id="downloadCertificates">Descargar Certificados</button>
+                    <button class="btn btn-sm btn-primary rounded mt-4" id="downloadCertificates" style="display: none;">Descargar Certificados</button>
                   </div>
                   <div class="row justify-content-center mt-2">
                     <div class="col-6">
@@ -174,30 +174,34 @@ if(!isset($_SESSION['cchl']['rol'])){
   <!-- Template Main JS File -->
   <script type="text/javascript">
     function buscarFolioSIAP(folioSIAP) {
-        $.ajax({
-            url: 'fetch/fetchSIAP.php',
-            type: 'post',
-            data: { action: 'buscarFolio', buscarfolio: folioSIAP },
-            dataType: 'json',
-            success: function(response) {
-                if (response.state) {
-                    $('#result').html(response.content);
-                    // Mostrar el botón "Descargar Certificados"
-                    $('#downloadCertificates').show();
+    $.ajax({
+        url: 'fetch/fetchSIAP.php',
+        type: 'post',
+        data: { action: 'buscarFolio', buscarfolio: folioSIAP },
+        dataType: 'json',
+        success: function(response) {
+            if (response.state) {
+                $('#result').html(response.content);
+                //Deshabilitar el botón "Descargar Certificados" según el estado del instructor
+                if (response.instructorAssigned) {
+                    $('#downloadCertificates').show().prop('disabled', false).text('Descargar Certificados');
                 } else {
-                    $('#alertas').show().addClass('alert alert-danger text-center').text(response.message);
-                    // Ocultar el botón "Descargar Certificados" si la búsqueda falla
-                    $('#downloadCertificates').hide();
+                    $('#downloadCertificates').show().prop('disabled', true).text('Asigne un instructor para descargar los certificados');
                 }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error en la solicitud AJAX:', error);
-                console.log(xhr.responseText);
-                // Ocultar el botón "Descargar Certificados" si hay un error en la búsqueda
+            } else {
+                $('#alertas').show().addClass('alert alert-danger text-center').text(response.message);
+                // Ocultar el botón "Descargar Certificados" si la búsqueda falla
                 $('#downloadCertificates').hide();
             }
-        });
-    }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error en la solicitud AJAX:', error);
+            console.log(xhr.responseText);
+            // Ocultar el botón "Descargar Certificados" si hay un error en la búsqueda
+            $('#downloadCertificates').hide();
+        }
+    });
+}
 
     $(document).on('click', '#buscar', function () {
         var folioSIAP = $('#folioSIAP').val();
