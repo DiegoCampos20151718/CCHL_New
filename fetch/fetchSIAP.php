@@ -11,8 +11,8 @@ if (isset($_POST['action'])) {
         case 'buscarFolio':
             buscarFolio();
             break;
-        case 'downloadCertificatesByFolio':
-            downloadCertificatesByFolio();
+        case 'descargarCertificados':
+            descargarCertificados();
             break;
         default:
             echo json_encode(['state' => false, 'message' => 'Acción no válida']);
@@ -102,11 +102,11 @@ function buscarFolio() {
     echo json_encode($data);
 }
 
-function downloadCertificatesByFolio() {
+function descargarCertificados() {
     try {
         $folioSIAP = $_POST['folioSIAP'];
         $db = new Database();
-        $query = $db->connect()->prepare('SELECT CP.NUMCONTROL, CP.MATRICULA FROM cchl_participantes CP WHERE CP.NUMCONTROL = :folioSIAP AND CP.CALIFICACION >= 80');
+        $query = $db->connect()->prepare('SELECT CP.NUMCONTROL, CP.MATRICULA FROM cchl_participantes CP WHERE CP.NUMCONTROL = :folioSIAP AND CP.CALIFICACION >= 70');
         $query->execute(['folioSIAP' => $folioSIAP]);
 
         if ($query->rowCount() > 0) {

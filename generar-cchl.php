@@ -211,7 +211,7 @@ if(!isset($_SESSION['cchl']['rol'])){
         $.ajax({
             url: 'fetch/fetchSIAP.php',
             type: 'post',
-            data: { action: 'downloadCertificatesByFolio', folioSIAP: folioSIAP },
+            data: { action: 'descargarCertificados', folioSIAP: folioSIAP },
             dataType: 'json',
             success: function(response) {
                 if (response.state) {
